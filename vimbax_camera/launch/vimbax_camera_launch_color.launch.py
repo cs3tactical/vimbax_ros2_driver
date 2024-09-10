@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -37,16 +36,16 @@ def generate_launch_description():
     launch_file_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Construct the absolute path to the settings file
-    settings_file_path = os.path.join(launch_file_dir, '../config/bw.xml')
-
+    settings_file_path = os.path.join(launch_file_dir, '../config/color_trig.xml')
+    
     return LaunchDescription([
         Node(
             package='vimbax_camera',
-            namespace='vimbax_camera_bw',
+            namespace='vimbax_camera_color',
             executable='vimbax_camera_node',
-            name='vimbax_camera_bw',
+            name='vimbax_camera_color',
             parameters=[{
-                "camera_id": "DEV_00012C010520",
+                "camera_id": "DEV_00012C03E654",
                 "settings_file": settings_file_path
                 # "camera_id": "00:0F-31-00-0E-2F"
                 # "camera_id": "169.254.103.205"

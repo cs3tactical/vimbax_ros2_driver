@@ -29,12 +29,12 @@
             <IgnoredFeature Name="DeviceReset" Type="Command" />
         </LocalDevice>
         <RemoteDevice>
-            <Feature Name="AcquisitionFrameRate" Value="12.4591" Type="Float" />
+            <Feature Name="AcquisitionFrameRate" Value="18.81843" Type="Float" />
             <Feature Name="AcquisitionFrameRateEnable" Value="0" Type="Bool" />
             <Feature Name="AcquisitionFrameRateMode" Value="Basic" Type="Enum" />
-            <Feature Name="AcquisitionMode" Value="SingleFrame" Type="Enum" />
+            <Feature Name="AcquisitionMode" Value="Continuous" Type="Enum" />
             <SelectorGroup Name="AcquisitionStatusSelector" Type="Enum" Value="AcquisitionActive">
-                <Feature Name="AcquisitionStatus" Value="0" Type="Bool" />
+                <Feature Name="AcquisitionStatus" Value="1" Type="Bool" />
             </SelectorGroup>
             <SelectorGroup Name="AcquisitionStatusSelector" Type="Enum" Value="AcquisitionTransfer">
                 <Feature Name="AcquisitionStatus" Value="0" Type="Bool" />
@@ -50,12 +50,12 @@
             <Feature Name="AutoModeRegionSelector" Value="AutoModeRegion1" Type="Enum" />
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Red">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="0.793457" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="1.048828" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Blue">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="2.441895" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="2.510254" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <Feature Name="BalanceRatioSelector" Value="Red" Type="Enum" />
@@ -137,13 +137,13 @@
             </SelectorGroup>
             <Feature Name="CorrectionSelector" Value="DefectPixelCorrection" Type="Enum" />
             <SelectorGroup Name="CounterSelector" Type="Enum" Value="Counter0">
-                <Feature Name="CounterStatus" Value="CounterIdle" Type="Enum" />
+                <Feature Name="CounterStatus" Value="CounterActive" Type="Enum" />
                 <Feature Name="CounterTriggerActivation" Value="RisingEdge" Type="Enum" />
-                <Feature Name="CounterTriggerSource" Value="Off" Type="Enum" />
-                <Feature Name="CounterValue" Value="0" Type="Int" />
+                <Feature Name="CounterTriggerSource" Value="Line1" Type="Enum" />
+                <Feature Name="CounterValue" Value="412" Type="Int" />
                 <Feature Name="CounterValueAtReset" Value="0" Type="Int" />
                 <Feature Name="CounterDuration" Value="0" Type="Int" />
-                <Feature Name="CounterEventSource" Value="Off" Type="Enum" />
+                <Feature Name="CounterEventSource" Value="Line1" Type="Enum" />
                 <Feature Name="CounterEventActivation" Value="RisingEdge" Type="Enum" />
                 <Feature Name="CounterResetSource" Value="Off" Type="Enum" />
                 <Feature Name="CounterResetActivation" Value="RisingEdge" Type="Enum" />
@@ -292,11 +292,9 @@
             <Feature Name="DeviceSerialNumber" Value="05H78" Type="String" />
             <Feature Name="DeviceTLVersionMajor" Value="1" Type="Int" />
             <Feature Name="DeviceTLVersionMinor" Value="0" Type="Int" />
-            <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Sensor">
-                <Feature Name="DeviceTemperature" Value="68.1" Type="Float" />
-            </SelectorGroup>
+            <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Sensor" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Mainboard">
-                <Feature Name="DeviceTemperature" Value="64.2" Type="Float" />
+                <Feature Name="DeviceTemperature" Value="65.2" Type="Float" />
             </SelectorGroup>
             <Feature Name="DeviceTemperatureSelector" Value="Mainboard" Type="Enum" />
             <Feature Name="DeviceUserID" Value="" Type="String" />
@@ -307,7 +305,7 @@
             <Feature Name="ExposureAutoMax" Value="9000000" Type="Float" />
             <Feature Name="ExposureAutoMin" Value="35.879" Type="Float" />
             <Feature Name="ExposureMode" Value="Timed" Type="Enum" />
-            <Feature Name="ExposureTime" Value="79899.96" Type="Float" />
+            <Feature Name="ExposureTime" Value="52776.73" Type="Float" />
             <Feature Name="FileProcessStatus" Value="None" Type="Enum" />
             <SelectorGroup Name="FileSelector" Type="Enum" Value="Firmware">
                 <SelectorGroup Name="FileOperationSelector" Type="Enum" Value="Open">
@@ -544,7 +542,7 @@
             <Feature Name="GainAutoMax" Value="48" Type="Float" />
             <Feature Name="GainAutoMin" Value="0" Type="Float" />
             <SelectorGroup Name="GainSelector" Type="Enum" Value="All">
-                <Feature Name="Gain" Value="6.02" Type="Float" />
+                <Feature Name="Gain" Value="1.3267" Type="Float" />
             </SelectorGroup>
             <Feature Name="GainSelector" Value="All" Type="Enum" />
             <Feature Name="Height" Value="1216" Type="Int" />
@@ -572,11 +570,11 @@
             </SelectorGroup>
             <Feature Name="LUTSelector" Value="Luminance" Type="Enum" />
             <SelectorGroup Name="LineSelector" Type="Enum" Value="Line0">
-                <Feature Name="LineMode" Value="Input" Type="Enum" />
+                <Feature Name="LineMode" Value="Output" Type="Enum" />
+                <Feature Name="LineInverter" Value="0" Type="Bool" />
+                <Feature Name="LineSource" Value="Timer0Active" Type="Enum" />
                 <Feature Name="LineStatus" Value="1" Type="Bool" />
                 <Feature Name="LineStatusAll" Value="3" Type="Int" />
-                <Feature Name="LineDebounceMode" Value="Off" Type="Enum" />
-                <Feature Name="LineDebounceDuration" Value="0.04040404" Type="Float" />
             </SelectorGroup>
             <SelectorGroup Name="LineSelector" Type="Enum" Value="Line1">
                 <Feature Name="LineMode" Value="Input" Type="Enum" />
@@ -610,14 +608,14 @@
                 <Feature Name="ColorTransformationEnable" Value="0" Type="Bool" />
             </SelectorGroup>
             <Feature Name="SubRegionSelector" Value="Region0" Type="Enum" />
-            <Feature Name="TLParamsLocked" Value="0" Type="Int" />
+            <Feature Name="TLParamsLocked" Value="1" Type="Int" />
             <Feature Name="TestPendingAck" Value="0" Type="Int" />
             <SelectorGroup Name="TimerSelector" Type="Enum" Value="Timer0">
-                <Feature Name="TimerDuration" Value="0" Type="Float" />
-                <Feature Name="TimerDelay" Value="0" Type="Float" />
-                <Feature Name="TimerStatus" Value="TimerIdle" Type="Enum" />
-                <Feature Name="TimerTriggerActivation" Value="RisingEdge" Type="Enum" />
-                <Feature Name="TimerTriggerSource" Value="Off" Type="Enum" />
+                <Feature Name="TimerDuration" Value="500000" Type="Float" />
+                <Feature Name="TimerDelay" Value="500000" Type="Float" />
+                <Feature Name="TimerStatus" Value="TimerDelay" Type="Enum" />
+                <Feature Name="TimerTriggerActivation" Value="FallingEdge" Type="Enum" />
+                <Feature Name="TimerTriggerSource" Value="Timer0Active" Type="Enum" />
             </SelectorGroup>
             <SelectorGroup Name="TimerSelector" Type="Enum" Value="Timer1">
                 <Feature Name="TimerDuration" Value="0" Type="Float" />
@@ -652,7 +650,7 @@
             </SelectorGroup>
             <SelectorGroup Name="TriggerSelector" Type="Enum" Value="FrameStart">
                 <Feature Name="TriggerMode" Value="Off" Type="Enum" />
-                <Feature Name="TriggerSource" Value="Line0" Type="Enum" />
+                <Feature Name="TriggerSource" Value="Software" Type="Enum" />
                 <Feature Name="TriggerActivation" Value="RisingEdge" Type="Enum" />
                 <Feature Name="TriggerDelay" Value="0" Type="Float" />
             </SelectorGroup>
@@ -697,18 +695,18 @@
     </CameraInfo>
     <Stream Id="DEV_00012C03E654_DS_0x0" Index="0">
         <Feature Name="StatFrameCRCError" Value="0" Type="Int" />
-        <Feature Name="StatFrameDelivered" Value="2" Type="Int" />
+        <Feature Name="StatFrameDelivered" Value="844" Type="Int" />
         <Feature Name="StatFrameIncomplete" Value="0" Type="Int" />
-        <Feature Name="StatFrameRate" Value="0.1015783" Type="Float" />
+        <Feature Name="StatFrameRate" Value="18.81892" Type="Float" />
         <Feature Name="StatFrameUnderrun" Value="0" Type="Int" />
         <Feature Name="StreamAcquisitionModeSelector" Value="Default" Type="Enum" />
         <Feature Name="StreamAnnounceBufferMinimum" Value="1" Type="Int" />
-        <Feature Name="StreamAnnouncedBufferCount" Value="0" Type="Int" />
+        <Feature Name="StreamAnnouncedBufferCount" Value="7" Type="Int" />
         <Feature Name="StreamBufferAlignment" Value="128" Type="Int" />
         <Feature Name="StreamBufferHandlingMode" Value="Default" Type="Enum" />
-        <Feature Name="StreamBufferMode" Value="Unknown" Type="String" />
+        <Feature Name="StreamBufferMode" Value="USERPTR" Type="String" />
         <Feature Name="StreamID" Value="DEV_00012C03E654_DS_0x0" Type="String" />
-        <Feature Name="StreamIsGrabbing" Value="0" Type="Bool" />
+        <Feature Name="StreamIsGrabbing" Value="1" Type="Bool" />
         <Feature Name="StreamLayout" Value="2" Type="Int" />
         <Feature Name="StreamPayloadSizeMode" Value="Auto" Type="Enum" />
         <Feature Name="StreamStopTimeout" Value="200" Type="Int" />

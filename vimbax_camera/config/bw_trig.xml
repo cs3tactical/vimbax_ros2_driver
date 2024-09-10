@@ -29,7 +29,7 @@
             <IgnoredFeature Name="DeviceReset" Type="Command" />
         </LocalDevice>
         <RemoteDevice>
-            <Feature Name="AcquisitionFrameRate" Value="57.44752" Type="Float" />
+            <Feature Name="AcquisitionFrameRate" Value="119.7063" Type="Float" />
             <Feature Name="AcquisitionFrameRateEnable" Value="0" Type="Bool" />
             <Feature Name="AcquisitionFrameRateMode" Value="Basic" Type="Enum" />
             <Feature Name="AcquisitionMode" Value="Continuous" Type="Enum" />
@@ -233,7 +233,7 @@
             <Feature Name="DeviceTLVersionMinor" Value="0" Type="Int" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Sensor" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Mainboard">
-                <Feature Name="DeviceTemperature" Value="66" Type="Float" />
+                <Feature Name="DeviceTemperature" Value="70.7" Type="Float" />
             </SelectorGroup>
             <Feature Name="DeviceTemperatureSelector" Value="Mainboard" Type="Enum" />
             <Feature Name="DeviceUserID" Value="" Type="String" />
@@ -241,10 +241,10 @@
             <Feature Name="DeviceVersion" Value="14852" Type="String" />
             <Feature Name="ExposureActiveMode" Value="FlashWindow" Type="Enum" />
             <Feature Name="ExposureAuto" Value="Continuous" Type="Enum" />
-            <Feature Name="ExposureAutoMax" Value="9000004" Type="Float" />
-            <Feature Name="ExposureAutoMin" Value="37.657" Type="Float" />
+            <Feature Name="ExposureAutoMax" Value="1.000001e+07" Type="Float" />
+            <Feature Name="ExposureAutoMin" Value="169.212" Type="Float" />
             <Feature Name="ExposureMode" Value="Timed" Type="Enum" />
-            <Feature Name="ExposureTime" Value="17217.62" Type="Float" />
+            <Feature Name="ExposureTime" Value="8164.202" Type="Float" />
             <Feature Name="FileProcessStatus" Value="None" Type="Enum" />
             <SelectorGroup Name="FileSelector" Type="Enum" Value="Firmware">
                 <SelectorGroup Name="FileOperationSelector" Type="Enum" Value="Open">
@@ -478,10 +478,10 @@
             </SelectorGroup>
             <Feature Name="FileSelector" Value="UserData" Type="Enum" />
             <Feature Name="GainAuto" Value="Continuous" Type="Enum" />
-            <Feature Name="GainAutoMax" Value="48" Type="Float" />
+            <Feature Name="GainAutoMax" Value="24" Type="Float" />
             <Feature Name="GainAutoMin" Value="0" Type="Float" />
             <SelectorGroup Name="GainSelector" Type="Enum" Value="All">
-                <Feature Name="Gain" Value="2.6794" Type="Float" />
+                <Feature Name="Gain" Value="8.4126" Type="Float" />
             </SelectorGroup>
             <Feature Name="GainSelector" Value="All" Type="Enum" />
             <Feature Name="Height" Value="1216" Type="Int" />
@@ -505,18 +505,18 @@
             <SelectorGroup Name="LUTSelector" Type="Enum" Value="Blue" />
             <Feature Name="LUTSelector" Value="Luminance" Type="Enum" />
             <SelectorGroup Name="LineSelector" Type="Enum" Value="Line0">
-                <Feature Name="LineMode" Value="Output" Type="Enum" />
-                <Feature Name="LineInverter" Value="0" Type="Bool" />
-                <Feature Name="LineSource" Value="FrameTriggerWait" Type="Enum" />
-                <Feature Name="LineStatus" Value="0" Type="Bool" />
-                <Feature Name="LineStatusAll" Value="2" Type="Int" />
-            </SelectorGroup>
-            <SelectorGroup Name="LineSelector" Type="Enum" Value="Line1">
                 <Feature Name="LineMode" Value="Input" Type="Enum" />
                 <Feature Name="LineStatus" Value="1" Type="Bool" />
-                <Feature Name="LineStatusAll" Value="2" Type="Int" />
+                <Feature Name="LineStatusAll" Value="1" Type="Int" />
                 <Feature Name="LineDebounceMode" Value="Off" Type="Enum" />
                 <Feature Name="LineDebounceDuration" Value="0.04040404" Type="Float" />
+            </SelectorGroup>
+            <SelectorGroup Name="LineSelector" Type="Enum" Value="Line1">
+                <Feature Name="LineMode" Value="Output" Type="Enum" />
+                <Feature Name="LineInverter" Value="0" Type="Bool" />
+                <Feature Name="LineSource" Value="Off" Type="Enum" />
+                <Feature Name="LineStatus" Value="0" Type="Bool" />
+                <Feature Name="LineStatusAll" Value="0" Type="Int" />
             </SelectorGroup>
             <Feature Name="LineSelector" Value="Line0" Type="Enum" />
             <Feature Name="OffsetX" Value="0" Type="Int" />
@@ -581,8 +581,8 @@
                 <Feature Name="TriggerDelay" Value="0" Type="Float" />
             </SelectorGroup>
             <SelectorGroup Name="TriggerSelector" Type="Enum" Value="FrameStart">
-                <Feature Name="TriggerMode" Value="Off" Type="Enum" />
-                <Feature Name="TriggerSource" Value="Software" Type="Enum" />
+                <Feature Name="TriggerMode" Value="On" Type="Enum" />
+                <Feature Name="TriggerSource" Value="Line0" Type="Enum" />
                 <Feature Name="TriggerActivation" Value="RisingEdge" Type="Enum" />
                 <Feature Name="TriggerDelay" Value="0" Type="Float" />
             </SelectorGroup>
@@ -627,9 +627,9 @@
     </CameraInfo>
     <Stream Id="DEV_00012C010520_DS_0x0" Index="0">
         <Feature Name="StatFrameCRCError" Value="0" Type="Int" />
-        <Feature Name="StatFrameDelivered" Value="162414" Type="Int" />
+        <Feature Name="StatFrameDelivered" Value="121" Type="Int" />
         <Feature Name="StatFrameIncomplete" Value="0" Type="Int" />
-        <Feature Name="StatFrameRate" Value="57.45145" Type="Float" />
+        <Feature Name="StatFrameRate" Value="1.000017" Type="Float" />
         <Feature Name="StatFrameUnderrun" Value="0" Type="Int" />
         <Feature Name="StreamAcquisitionModeSelector" Value="Default" Type="Enum" />
         <Feature Name="StreamAnnounceBufferMinimum" Value="1" Type="Int" />
