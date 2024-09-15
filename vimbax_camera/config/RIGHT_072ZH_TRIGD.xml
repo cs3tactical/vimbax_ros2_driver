@@ -37,7 +37,7 @@
                 <Feature Name="AcquisitionStatus" Value="1" Type="Bool" />
             </SelectorGroup>
             <SelectorGroup Name="AcquisitionStatusSelector" Type="Enum" Value="AcquisitionTransfer">
-                <Feature Name="AcquisitionStatus" Value="1" Type="Bool" />
+                <Feature Name="AcquisitionStatus" Value="0" Type="Bool" />
             </SelectorGroup>
             <Feature Name="AcquisitionStatusSelector" Value="AcquisitionActive" Type="Enum" />
             <Feature Name="AdaptiveNoiseSuppressionFactor" Value="1" Type="Float" />
@@ -50,12 +50,12 @@
             <Feature Name="AutoModeRegionSelector" Value="AutoModeRegion1" Type="Enum" />
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Red">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="1.474609" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="1.488281" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Blue">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="2.870117" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="2.988281" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <Feature Name="BalanceRatioSelector" Value="Red" Type="Enum" />
@@ -300,7 +300,7 @@
             <Feature Name="DeviceTLVersionMinor" Value="0" Type="Int" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Sensor" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Mainboard">
-                <Feature Name="DeviceTemperature" Value="58.7" Type="Float" />
+                <Feature Name="DeviceTemperature" Value="57.5" Type="Float" />
             </SelectorGroup>
             <Feature Name="DeviceTemperatureSelector" Value="Mainboard" Type="Enum" />
             <Feature Name="DeviceTemperatureStatus" Value="OK" Type="Enum" />
@@ -5234,7 +5234,7 @@
             <Feature Name="LensShadingIndex" Value="0" Type="Int" />
             <SelectorGroup Name="LineSelector" Type="Enum" Value="Line0">
                 <Feature Name="LineMode" Value="Input" Type="Enum" />
-                <Feature Name="LineStatus" Value="1" Type="Bool" />
+                <Feature Name="LineStatus" Value="0" Type="Bool" />
                 <Feature Name="LineDebounceMode" Value="Off" Type="Enum" />
                 <Feature Name="LineDebounceDuration" Value="0.04040404" Type="Float" />
             </SelectorGroup>
@@ -5245,7 +5245,7 @@
                 <Feature Name="LineDebounceDuration" Value="0.04040404" Type="Float" />
             </SelectorGroup>
             <Feature Name="LineSelector" Value="Line0" Type="Enum" />
-            <Feature Name="LineStatusAll" Value="3" Type="Int" />
+            <Feature Name="LineStatusAll" Value="2" Type="Int" />
             <Feature Name="OffsetX" Value="0" Type="Int" />
             <Feature Name="OffsetY" Value="0" Type="Int" />
             <Feature Name="PayloadSize" Value="7064064" Type="Int" />
@@ -5312,7 +5312,7 @@
             </SelectorGroup>
             <SelectorGroup Name="TriggerSelector" Type="Enum" Value="FrameStart">
                 <Feature Name="TriggerMode" Value="Off" Type="Enum" />
-                <Feature Name="TriggerSource" Value="Software" Type="Enum" />
+                <Feature Name="TriggerSource" Value="Line0" Type="Enum" />
                 <Feature Name="TriggerActivation" Value="RisingEdge" Type="Enum" />
                 <Feature Name="TriggerDelay" Value="0" Type="Float" />
             </SelectorGroup>
@@ -5361,9 +5361,9 @@
     </CameraInfo>
     <Stream Id="DEV_00012C050ADD_DS_0x0" Index="0">
         <Feature Name="StatFrameCRCError" Value="0" Type="Int" />
-        <Feature Name="StatFrameDelivered" Value="2441" Type="Int" />
+        <Feature Name="StatFrameDelivered" Value="4654" Type="Int" />
         <Feature Name="StatFrameIncomplete" Value="0" Type="Int" />
-        <Feature Name="StatFrameRate" Value="19.85703" Type="Float" />
+        <Feature Name="StatFrameRate" Value="19.85742" Type="Float" />
         <Feature Name="StatFrameUnderrun" Value="0" Type="Int" />
         <Feature Name="StreamAcquisitionModeSelector" Value="Default" Type="Enum" />
         <Feature Name="StreamAnnounceBufferMinimum" Value="1" Type="Int" />

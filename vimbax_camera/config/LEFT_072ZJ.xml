@@ -29,7 +29,7 @@
             <IgnoredFeature Name="DeviceReset" Type="Command" />
         </LocalDevice>
         <RemoteDevice>
-            <Feature Name="AcquisitionFrameRate" Value="16.97584" Type="Float" />
+            <Feature Name="AcquisitionFrameRate" Value="36.24738" Type="Float" />
             <Feature Name="AcquisitionFrameRateEnable" Value="0" Type="Bool" />
             <Feature Name="AcquisitionFrameRateMode" Value="Basic" Type="Enum" />
             <Feature Name="AcquisitionMode" Value="Continuous" Type="Enum" />
@@ -50,12 +50,12 @@
             <Feature Name="AutoModeRegionSelector" Value="AutoModeRegion1" Type="Enum" />
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Red">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="1.338867" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="1.258789" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <SelectorGroup Name="BalanceRatioSelector" Type="Enum" Value="Blue">
                 <SelectorGroup Name="SubRegionSelector" Type="Enum" Value="Region0">
-                    <Feature Name="BalanceRatio" Value="2.785645" Type="Float" />
+                    <Feature Name="BalanceRatio" Value="2.499023" Type="Float" />
                 </SelectorGroup>
             </SelectorGroup>
             <Feature Name="BalanceRatioSelector" Value="Red" Type="Enum" />
@@ -300,19 +300,19 @@
             <Feature Name="DeviceTLVersionMinor" Value="0" Type="Int" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Sensor" />
             <SelectorGroup Name="DeviceTemperatureSelector" Type="Enum" Value="Mainboard">
-                <Feature Name="DeviceTemperature" Value="78.5" Type="Float" />
+                <Feature Name="DeviceTemperature" Value="42" Type="Float" />
             </SelectorGroup>
             <Feature Name="DeviceTemperatureSelector" Value="Mainboard" Type="Enum" />
-            <Feature Name="DeviceTemperatureStatus" Value="Warning" Type="Enum" />
+            <Feature Name="DeviceTemperatureStatus" Value="OK" Type="Enum" />
             <Feature Name="DeviceUserID" Value="" Type="String" />
             <Feature Name="DeviceVendorName" Value="Allied Vision" Type="String" />
             <Feature Name="DeviceVersion" Value="14855" Type="String" />
             <Feature Name="ExposureActiveMode" Value="FlashWindow" Type="Enum" />
             <Feature Name="ExposureAuto" Value="Continuous" Type="Enum" />
-            <Feature Name="ExposureAutoMax" Value="1.000001e+07" Type="Float" />
+            <Feature Name="ExposureAutoMax" Value="49997.98" Type="Float" />
             <Feature Name="ExposureAutoMin" Value="24.808" Type="Float" />
             <Feature Name="ExposureMode" Value="Timed" Type="Enum" />
-            <Feature Name="ExposureTime" Value="58478.14" Type="Float" />
+            <Feature Name="ExposureTime" Value="27325.17" Type="Float" />
             <Feature Name="FileProcessStatus" Value="None" Type="Enum" />
             <SelectorGroup Name="FileSelector" Type="Enum" Value="Firmware">
                 <SelectorGroup Name="FileOperationSelector" Type="Enum" Value="Open">
@@ -917,7 +917,7 @@
             <Feature Name="GainAutoMax" Value="48" Type="Float" />
             <Feature Name="GainAutoMin" Value="0" Type="Float" />
             <SelectorGroup Name="GainSelector" Type="Enum" Value="All">
-                <Feature Name="Gain" Value="0" Type="Float" />
+                <Feature Name="Gain" Value="8.1" Type="Float" />
             </SelectorGroup>
             <Feature Name="GainSelector" Value="All" Type="Enum" />
             <Feature Name="Height" Value="1216" Type="Int" />
@@ -5361,9 +5361,9 @@
     </CameraInfo>
     <Stream Id="DEV_00012C050ADF_DS_0x0" Index="0">
         <Feature Name="StatFrameCRCError" Value="0" Type="Int" />
-        <Feature Name="StatFrameDelivered" Value="1342" Type="Int" />
+        <Feature Name="StatFrameDelivered" Value="13006" Type="Int" />
         <Feature Name="StatFrameIncomplete" Value="0" Type="Int" />
-        <Feature Name="StatFrameRate" Value="16.91361" Type="Float" />
+        <Feature Name="StatFrameRate" Value="36.21876" Type="Float" />
         <Feature Name="StatFrameUnderrun" Value="0" Type="Int" />
         <Feature Name="StreamAcquisitionModeSelector" Value="Default" Type="Enum" />
         <Feature Name="StreamAnnounceBufferMinimum" Value="1" Type="Int" />
