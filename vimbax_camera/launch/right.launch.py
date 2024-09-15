@@ -29,27 +29,30 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    # Get the directory of this launch file
-    launch_file_dir = os.path.dirname(os.path.realpath(__file__))
+    # Get the directory of the vimbax_camera package
+    vimbax_camera_share_dir = get_package_share_directory('vimbax_camera')
 
     # Construct the absolute path to the settings file
-    settings_file_path = os.path.join(launch_file_dir, '../config/color.xml')
+    right_settings_file_path = os.path.join(vimbax_camera_share_dir, 'config', 'RIGHT_072ZH.xml')#'bw_trig.xml')
+    print("right_settings_file_path:", right_settings_file_path)
     
     return LaunchDescription([
         Node(
             package='vimbax_camera',
-            namespace='vimbax_camera_color',
+            namespace='vimbax_camera_right',
             executable='vimbax_camera_node',
-            name='vimbax_camera_color',
+            name='vimbax_camera_right',
             parameters=[{
-                "camera_id": "DEV_00012C03E654",
-                "settings_file": settings_file_path
-                # "camera_id": "00:0F-31-00-0E-2F"
-                # "camera_id": "169.254.103.205"
-                # "camera_id": "DEV_000F31000E2F"
-            }]
+                "camera_id": "DEV_00012C050ADD",
+                "settings_file": right_settings_file_path
+            }],
+            output='screen',
+            emulate_tty=True,
+            log_cmd=True,
+            additional_env={'RCUTILS_LOGGING_SEVERITY_THRESHOLD': 'DEBUG'}
         )
     ])
