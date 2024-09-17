@@ -38,7 +38,8 @@ def generate_launch_description():
             executable='vimbax_camera_node',
             name='vimbax_camera_ir',
             parameters=[{
-                "camera_id": "192.168.1.45"
+                "camera_id": "192.168.1.45",
+                "use_ros_time": True
             }]
         ), 
         Node(
@@ -47,7 +48,8 @@ def generate_launch_description():
             executable='vimbax_camera_node',
             name='vimbax_camera_rgb',
             parameters=[{
-                "camera_id": "192.168.1.40"
+                "camera_id": "192.168.1.40",
+                "use_ros_time": True
             }]
         )
     ])

@@ -34,6 +34,7 @@ ament_target_dependencies(
         ${PROJECT_NAME}
         "rclcpp"
         "rclcpp_components"
+        "sensor_msgs"
         "image_transport"
         "camera_info_manager"
         "vimbax_camera_msgs"
@@ -52,6 +53,12 @@ install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin
 )
+
+add_executable(multi_topic_subscriber src/multi_topic_subscriber.cpp)
+ament_target_dependencies(multi_topic_subscriber rclcpp sensor_msgs)
+install(TARGETS
+  multi_topic_subscriber
+  DESTINATION lib/${PROJECT_NAME})
 
 # Install launch files.
 install(DIRECTORY
