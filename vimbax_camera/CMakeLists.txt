@@ -54,11 +54,11 @@ install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION bin
 )
 
-add_executable(multi_topic_subscriber src/multi_topic_subscriber.cpp)
-ament_target_dependencies(multi_topic_subscriber rclcpp sensor_msgs)
+add_executable(multi_camera_synchronisation src/multi_camera_synchronisation.cpp)
+ament_target_dependencies(multi_camera_synchronisation rclcpp sensor_msgs)
 install(TARGETS
-  multi_topic_subscriber
-  DESTINATION lib/${PROJECT_NAME})
+        multi_camera_synchronisation
+        DESTINATION lib/${PROJECT_NAME})
 
 # Install launch files.
 install(DIRECTORY
