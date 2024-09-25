@@ -81,7 +81,7 @@ private:
 class NodeManager
 {
 public:
-    NodeManager()
+    NodeManager(double time_threshold) : time_threshold_(time_threshold)
     {
         create_nodes();
 
@@ -140,7 +140,7 @@ public:
                 diff_ = (masterNode_->stamp_ - slaveNode_->stamp_)/1000000.0;
                 RCLCPP_INFO(masterNode_->get_logger(), "Time difference in ms: '%f'", diff_);
                 
-                if (diff_ < 1.0 && diff_ > -1.0) {
+                if (diff_ < time_threshold_ && diff_ > -time_threshold_) {
                     ready_ = true;
                     RCLCPP_INFO(masterNode_->get_logger(), "Ready");
                     RCLCPP_INFO(masterNode_->get_logger(), "Time difference in ms: '%f'", diff_);
@@ -148,7 +148,7 @@ public:
 
                 if (!ready_){
                     RCLCPP_INFO(masterNode_->get_logger(), "Not ready");
-                    if ((diff_ > 1.0 || diff_ < -1.0) && recreateCounter_ < 0) {
+                    if ((diff_ > time_threshold_ || diff_ < -time_threshold_) && recreateCounter_ < 0) {
                         RCLCPP_INFO(masterNode_->get_logger(), "Reset subscription to slave node");
                         recreate_slave_node();
                     }
@@ -166,14 +166,24 @@ private:
     double diff_;
     int recreateCounter_;
     bool ready_;
+    double time_threshold_;  // Add time threshold
 };
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
 
-    // Create an instance of the node manager
-    NodeManager manager;
+    // Check for the time threshold argument from the command line
+    if (argc < 2) {
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Usage: %s <time_threshold>", argv[0]);
+        return 1;
+    }
+
+    // Convert the command line argument to a double value for time threshold
+    double time_threshold = std::stod(argv[1]);
+
+    // Create an instance of the node manager with the given time threshold
+    NodeManager manager(time_threshold);
 
     // Spin to handle callbacks and node recreation
     rclcpp::Rate loop_rate(100); 
