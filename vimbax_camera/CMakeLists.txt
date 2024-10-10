@@ -34,6 +34,7 @@ ament_target_dependencies(
         ${PROJECT_NAME}
         "rclcpp"
         "rclcpp_components"
+        "sensor_msgs"
         "image_transport"
         "camera_info_manager"
         "vimbax_camera_msgs"
@@ -55,6 +56,24 @@ install(TARGETS ${PROJECT_NAME}
 install(
   DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
+)
+
+add_executable(multi_camera_synchronisation src/multi_camera_synchronisation.cpp)
+ament_target_dependencies(multi_camera_synchronisation rclcpp sensor_msgs)
+install(TARGETS
+        multi_camera_synchronisation
+        DESTINATION lib/${PROJECT_NAME})
+
+# Install launch files.
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install parameter files.
+install(DIRECTORY
+  params
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
