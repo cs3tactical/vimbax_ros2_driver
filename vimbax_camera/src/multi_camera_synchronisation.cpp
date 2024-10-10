@@ -16,7 +16,7 @@ public:
     void initialize_subscription() 
     {
         subscription_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-            "/vimbax_camera_ir/camera_info", 10, std::bind(&MasterCameraSubscriber::topic_callback, this, std::placeholders::_1));
+            "/vimbax_camera_left/camera_info", 10, std::bind(&MasterCameraSubscriber::topic_callback, this, std::placeholders::_1));
     }
 
     void topic_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg) 
@@ -54,7 +54,7 @@ public:
     void initialize_subscription() 
     {
         subscription_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-            "/vimbax_camera_rgb/camera_info", 10, std::bind(&SlaveCameraSubscriber::topic_callback, this, std::placeholders::_1));
+            "/vimbax_camera_right/camera_info", 10, std::bind(&SlaveCameraSubscriber::topic_callback, this, std::placeholders::_1));
     }
 
     void topic_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg) 

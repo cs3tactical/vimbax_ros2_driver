@@ -21,6 +21,11 @@ sudo apt install ros-humble-rmw-cyclonedds-cpp
 sudo apt install ./ros-humble-vimbax-camera-driver.deb 
 ```
 
+## Multi camera syncronization
+```shell
+ros2 run vimbax_camera multi_camera_synchronisation 1.0
+```
+
 ## Getting started
 
 Setup the ROS 2 environment:
