@@ -47,47 +47,49 @@ private:
         auto request = std::make_shared<vimbax_camera_msgs::srv::TriggerTime::Request>();
         request->trigger_time = trigger_time_;
 
-        // Send requests to both camera nodes
+        // Send requests to both camera nodes and use shared_ptr to handle futures
         auto left_future = left_camera_client_->async_send_request(request);
         auto right_future = right_camera_client_->async_send_request(request);
 
-        // Wait for and handle left camera's response
-        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), left_future) == rclcpp::FutureReturnCode::SUCCESS) {
-            if (left_future.get()->success) {
-                RCLCPP_INFO(this->get_logger(), "Left camera acknowledged the trigger time.");
-            } else {
+        // Wait for both responses to be completed
+        rclcpp::spin_until_future_complete(this->get_node_base_interface(), left_future);
+        rclcpp::spin_until_future_complete(this->get_node_base_interface(), right_future);
+
+        bool left_ack = left_future.get()->success;
+        bool right_ack = right_future.get()->success;
+
+        // Check for acknowledgments
+        if (left_ack && right_ack) {
+            RCLCPP_INFO(this->get_logger(), "Both cameras acknowledged the trigger time.");
+
+            // Wait until the trigger time
+            rclcpp::Time now = this->get_clock()->now();
+            while (now < trigger_time_) {
+                // Calculate the remaining time
+                rclcpp::Duration remaining_time = trigger_time_ - now;
+
+                // Sleep for a small fraction of the remaining time
+                rclcpp::Duration sleep_duration = std::min(remaining_time, rclcpp::Duration::from_seconds(0.01));
+                rclcpp::sleep_for(std::chrono::nanoseconds(sleep_duration.nanoseconds()));
+
+                // Update current time
+                now = this->get_clock()->now();
+            }
+
+            // Trigger the cameras at the exact trigger time
+            trigger_cameras();
+        } else {
+            // Log which camera did not acknowledge and retry with a larger delay
+            if (!left_ack) {
                 RCLCPP_WARN(this->get_logger(), "Left camera did not acknowledge trigger time.");
-                retry_send_trigger_time(2s);
-                return;
             }
-        } else {
-            RCLCPP_WARN(this->get_logger(), "Left camera service call failed. Retrying...");
-            retry_send_trigger_time(2s);
-            return;
-        }
-
-        // Wait for and handle right camera's response
-        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), right_future) == rclcpp::FutureReturnCode::SUCCESS) {
-            if (right_future.get()->success) {
-                RCLCPP_INFO(this->get_logger(), "Right camera acknowledged the trigger time.");
-            } else {
+            if (!right_ack) {
                 RCLCPP_WARN(this->get_logger(), "Right camera did not acknowledge trigger time.");
-                retry_send_trigger_time(2s);
-                return;
             }
-        } else {
-            RCLCPP_WARN(this->get_logger(), "Right camera service call failed. Retrying...");
-            retry_send_trigger_time(2s);
-            return;
+
+            RCLCPP_WARN(this->get_logger(), "Retrying with a delay of 2 seconds...");
+            send_trigger_time(2s);
         }
-
-        // If both acknowledgments were successful, trigger the cameras
-        trigger_cameras();
-    }
-
-    void retry_send_trigger_time(std::chrono::seconds delay) {
-        RCLCPP_WARN(this->get_logger(), "Retrying with a delay of %ld seconds...", delay.count());
-        send_trigger_time(delay);
     }
 
     void trigger_cameras() {
@@ -99,8 +101,7 @@ private:
         std::system("echo 33333333 > /sys/class/pwm/pwmchip0/pwm0/duty_cycle");
         std::system("echo 1 > /sys/class/pwm/pwmchip0/pwm0/enable");
 
-        RCLCPP_INFO(this->get_logger(), "PWM signal triggered at ROS time: %f.%09ld",
-                    trigger_time_.seconds(), trigger_time_.nanoseconds());
+        RCLCPP_INFO(this->get_logger(), "PWM signal triggered at ROS time: %.9f", trigger_time_.seconds());
     }
 };
 
