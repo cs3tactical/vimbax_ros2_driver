@@ -47,45 +47,47 @@ private:
         auto request = std::make_shared<vimbax_camera_msgs::srv::TriggerTime::Request>();
         request->trigger_time = trigger_time_;
 
-        // Send requests to both camera nodes and use shared_ptr to handle futures
-        auto left_future = std::make_shared<rclcpp::Client<vimbax_camera_msgs::srv::TriggerTime>::SharedFuture>(
-            left_camera_client_->async_send_request(request));
-        auto right_future = std::make_shared<rclcpp::Client<vimbax_camera_msgs::srv::TriggerTime>::SharedFuture>(
-            right_camera_client_->async_send_request(request));
+        // Send requests to both camera nodes
+        auto left_future = left_camera_client_->async_send_request(request);
+        auto right_future = right_camera_client_->async_send_request(request);
 
-        RCLCPP_INFO(this->get_logger(), "Trigger time sent to both cameras");
+        // Wait for and handle left camera's response
+        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), left_future) == rclcpp::FutureReturnCode::SUCCESS) {
+            if (left_future.get()->success) {
+                RCLCPP_INFO(this->get_logger(), "Left camera acknowledged the trigger time.");
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Left camera did not acknowledge trigger time.");
+                retry_send_trigger_time(2s);
+                return;
+            }
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Left camera service call failed. Retrying...");
+            retry_send_trigger_time(2s);
+            return;
+        }
 
-        // Create a timer to trigger the cameras after the delay
-        auto timer = this->create_wall_timer(
-            delay, [this, left_future, right_future, delay]() {
-                bool left_ack = false, right_ack = false;
+        // Wait for and handle right camera's response
+        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), right_future) == rclcpp::FutureReturnCode::SUCCESS) {
+            if (right_future.get()->success) {
+                RCLCPP_INFO(this->get_logger(), "Right camera acknowledged the trigger time.");
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Right camera did not acknowledge trigger time.");
+                retry_send_trigger_time(2s);
+                return;
+            }
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Right camera service call failed. Retrying...");
+            retry_send_trigger_time(2s);
+            return;
+        }
 
-                if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), *left_future, 500ms) == rclcpp::FutureReturnCode::SUCCESS) {
-                    left_ack = left_future->get()->success;
-                }
+        // If both acknowledgments were successful, trigger the cameras
+        trigger_cameras();
+    }
 
-                if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), *right_future, 500ms) == rclcpp::FutureReturnCode::SUCCESS) {
-                    right_ack = right_future->get()->success;
-                }
-
-                // Check for acknowledgments
-                if (left_ack && right_ack) {
-                    RCLCPP_INFO(this->get_logger(), "Both cameras acknowledged the trigger time.");
-                    // Trigger the cameras
-                    trigger_cameras();
-                } else {
-                    // Log which camera did not acknowledge and retry with a larger delay
-                    if (!left_ack) {
-                        RCLCPP_WARN(this->get_logger(), "Left camera did not acknowledge trigger time.");
-                    }
-                    if (!right_ack) {
-                        RCLCPP_WARN(this->get_logger(), "Right camera did not acknowledge trigger time.");
-                    }
-
-                    RCLCPP_WARN(this->get_logger(), "Retrying with a delay of 2 seconds...");
-                    send_trigger_time(2s);
-                }
-            });
+    void retry_send_trigger_time(std::chrono::seconds delay) {
+        RCLCPP_WARN(this->get_logger(), "Retrying with a delay of %ld seconds...", delay.count());
+        send_trigger_time(delay);
     }
 
     void trigger_cameras() {
