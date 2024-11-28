@@ -8,53 +8,56 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 
 set(vimbax_camera_MSGS
-        msg/FeatureFlags.msg
-        msg/FeatureInfo.msg
-        msg/EventDataEntry.msg
-        msg/EventData.msg
-        msg/Error.msg
-        msg/FeatureModule.msg
-        msg/TriggerInfo.msg
+    msg/FeatureFlags.msg
+    msg/FeatureInfo.msg
+    msg/EventDataEntry.msg
+    msg/EventData.msg
+    msg/Error.msg
+    msg/FeatureModule.msg
+    msg/TriggerInfo.msg
 )
 
 set(vimbax_camera_SRVS
-        srv/FeatureIntGet.srv
-        srv/FeatureIntSet.srv
-        srv/FeatureIntInfoGet.srv
-        srv/FeatureFloatGet.srv
-        srv/FeatureFloatSet.srv
-        srv/FeatureFloatInfoGet.srv
-        srv/FeatureStringGet.srv
-        srv/FeatureStringSet.srv
-        srv/FeatureStringInfoGet.srv
-        srv/FeatureBoolGet.srv
-        srv/FeatureBoolSet.srv
-        srv/FeatureCommandIsDone.srv
-        srv/FeatureCommandRun.srv
-        srv/FeatureEnumGet.srv
-        srv/FeatureEnumSet.srv
-        srv/FeatureEnumInfoGet.srv
-        srv/FeatureEnumAsIntGet.srv
-        srv/FeatureEnumAsStringGet.srv
-        srv/FeatureRawGet.srv
-        srv/FeatureRawSet.srv
-        srv/FeatureRawInfoGet.srv
-        srv/FeatureAccessModeGet.srv
-        srv/FeatureInfoQuery.srv
-        srv/FeaturesListGet.srv
-        srv/SettingsLoadSave.srv
-        srv/Status.srv
-        srv/StreamStartStop.srv
-        srv/SubscribeEvent.srv
-        srv/UnsubscribeEvent.srv
-        srv/ConnectionStatus.srv
+    srv/FeatureIntGet.srv
+    srv/FeatureIntSet.srv
+    srv/FeatureIntInfoGet.srv
+    srv/FeatureFloatGet.srv
+    srv/FeatureFloatSet.srv
+    srv/FeatureFloatInfoGet.srv
+    srv/FeatureStringGet.srv
+    srv/FeatureStringSet.srv
+    srv/FeatureStringInfoGet.srv
+    srv/FeatureBoolGet.srv
+    srv/FeatureBoolSet.srv
+    srv/FeatureCommandIsDone.srv
+    srv/FeatureCommandRun.srv
+    srv/FeatureEnumGet.srv
+    srv/FeatureEnumSet.srv
+    srv/FeatureEnumInfoGet.srv
+    srv/FeatureEnumAsIntGet.srv
+    srv/FeatureEnumAsStringGet.srv
+    srv/FeatureRawGet.srv
+    srv/FeatureRawSet.srv
+    srv/FeatureRawInfoGet.srv
+    srv/FeatureAccessModeGet.srv
+    srv/FeatureInfoQuery.srv
+    srv/FeaturesListGet.srv
+    srv/SettingsLoadSave.srv
+    srv/Status.srv
+    srv/StreamStartStop.srv
+    srv/SubscribeEvent.srv
+    srv/UnsubscribeEvent.srv
+    srv/TriggerTime.srv
+    srv/ConnectionStatus.srv
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-        ${vimbax_camera_MSGS}
-        ${vimbax_camera_SRVS}
+    ${vimbax_camera_MSGS}
+    ${vimbax_camera_SRVS}
+    DEPENDENCIES builtin_interfaces
 )
 
 if(BUILD_TESTING)

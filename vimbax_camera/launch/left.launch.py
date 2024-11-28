@@ -37,7 +37,7 @@ def generate_launch_description():
     vimbax_camera_share_dir = get_package_share_directory('vimbax_camera')
 
     # Construct the absolute path to the settings file
-    left_settings_file_path = os.path.join(vimbax_camera_share_dir, 'config', 'LEFT_072ZJ.xml')#'color_trig.xml')
+    left_settings_file_path = os.path.join(vimbax_camera_share_dir, 'config', 'LEFT_ZH_PWM_TRIGED.xml')#'color_trig.xml')
     print("left_settings_file_path", left_settings_file_path)
 
     return LaunchDescription([
@@ -47,7 +47,7 @@ def generate_launch_description():
             executable='vimbax_camera_node',
             name='vimbax_camera_left',
             parameters=[{
-                "camera_id": "DEV_00012C050ADF",
+                # "camera_id": "DEV_00012C050ADD",
                 "settings_file": left_settings_file_path
             }],
             output='screen',

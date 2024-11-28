@@ -130,6 +130,11 @@ bool VimbaXCameraNode::initialize(const rclcpp::NodeOptions & options)
     return false;
   }
 
+  set_trigger_time_service_ = node_->create_service<vimbax_camera_msgs::srv::TriggerTime>(
+    "set_trigger_time",
+    std::bind(&VimbaXCameraNode::handle_set_trigger_time, this, std::placeholders::_1, std::placeholders::_2)
+  );
+
 
   RCLCPP_INFO(get_logger(), "Initialization done!");
   return true;
@@ -1600,14 +1605,28 @@ result<void> VimbaXCameraNode::start_streaming()
           RCLCPP_WARN(get_logger(), "%ld frames missing", diff - 1);
         }
       }
+      else {
+        // save the first frame timestamp for streo sync
+        start_time_ = frame->get_timestamp_ns();
+      }
       last_frame_id_ = frame->get_frame_id();
 
       frame->header.set__frame_id(node_->get_parameter(parameter_frame_id).as_string());
 
 
-      if (node_->get_parameter(parameter_use_ros_time).as_bool()) {
+      if (timestamp_service_received_) {
+        // Timestamp correction logic if service call has been received
+        double current_camera_time = static_cast<double>(frame->get_timestamp_ns());
+        double time_offset = (current_camera_time - start_time_) * 1e-9;  // convert nanoseconds to seconds
+        rclcpp::Time corrected_time = trigger_time_ + rclcpp::Duration::from_seconds(time_offset);
+        frame->header.stamp = corrected_time;
+      } 
+      else if (node_->get_parameter(parameter_use_ros_time).as_bool()) 
+      {
         frame->header.stamp = node_->now();
-      } else {
+      } 
+      else 
+      {
         std::chrono::nanoseconds vmbTimeStamp{frame->get_timestamp_ns()};
         auto const seconds = std::chrono::floor<std::chrono::seconds>(vmbTimeStamp);
         auto const nanoseconds =
@@ -1616,6 +1635,12 @@ result<void> VimbaXCameraNode::start_streaming()
         frame->header.stamp.sec = int32_t(seconds.count());
         frame->header.stamp.nanosec = nanoseconds.count();
       }
+
+      // Log frame ID and associated timestamp
+      RCLCPP_INFO(get_logger(), "Frame ID: %ld, Timestamp: %d.%03u",
+                  frame->get_frame_id(),
+                  frame->header.stamp.sec,
+                  frame->header.stamp.nanosec);
 
       auto const camera_info = [&] {
         auto const loaded_info = camera_info_manager_->getCameraInfo();
@@ -1683,6 +1708,35 @@ VimbaXCameraNode::NodeBaseInterface::SharedPtr VimbaXCameraNode::get_node_base_i
 {
   return node_->get_node_base_interface();
 }
+
+void vimbax_camera::VimbaXCameraNode::set_timestamp_service_received(bool value)
+{
+  timestamp_service_received_ = value;
+}
+
+void VimbaXCameraNode::set_trigger_time(const rclcpp::Time& trigger_time) 
+{
+  trigger_time_ = trigger_time;
+  timestamp_service_received_ = true;
+}
+
+void VimbaXCameraNode::handle_set_trigger_time(
+  const std::shared_ptr<vimbax_camera_msgs::srv::TriggerTime::Request> request,
+  std::shared_ptr<vimbax_camera_msgs::srv::TriggerTime::Response> response)
+{
+  // Set trigger_time_ to the value received from the service request
+  trigger_time_ = rclcpp::Time(request->trigger_time);
+  timestamp_service_received_ = true;
+
+  RCLCPP_INFO(node_->get_logger(), "Trigger time set to %d.%d",
+              request->trigger_time.sec, request->trigger_time.nanosec);
+  
+  response->success = true;
+}
+
+
+
+
 
 }  // namespace vimbax_camera
 

@@ -1,0 +1,5 @@
+# Request
+builtin_interfaces/Time trigger_time
+---
+# Response
+bool success

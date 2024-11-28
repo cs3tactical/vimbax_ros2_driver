@@ -70,6 +70,8 @@
 #include <vimbax_camera_msgs/srv/status.hpp>
 #include <vimbax_camera_msgs/srv/stream_start_stop.hpp>
 #include <vimbax_camera_msgs/srv/connection_status.hpp>
+#include <vimbax_camera_msgs/srv/trigger_time.hpp>
+
 
 #include <vimbax_camera_msgs/msg/event_data.hpp>
 
@@ -86,6 +88,8 @@ namespace vimbax_camera
 class VimbaXCameraNode
 {
 public:
+  void set_timestamp_service_received(bool value);
+  void set_trigger_time(const rclcpp::Time& trigger_time);
   using NodeBaseInterface = rclcpp::node_interfaces::NodeBaseInterface;
   explicit VimbaXCameraNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions{});
   ~VimbaXCameraNode();
@@ -96,6 +100,15 @@ public:
   void on_camera_discovery_callback(const VmbHandle_t handle, const char * name);
 
 private:
+  // Stereo synchronization:
+  uint64_t start_time_{0};
+  rclcpp::Time trigger_time_{0, 0};
+  bool timestamp_service_received_ = false;
+  void handle_set_trigger_time(
+    const std::shared_ptr<vimbax_camera_msgs::srv::TriggerTime::Request> request,
+    std::shared_ptr<vimbax_camera_msgs::srv::TriggerTime::Response> response);
+
+
   using OnSetParametersCallbackHandle = rclcpp::Node::OnSetParametersCallbackHandle;
 
   const std::string parameter_camera_id = "camera_id";
@@ -152,6 +165,8 @@ private:
   image_transport::CameraPublisher camera_publisher_;
 
   // Services
+  rclcpp::Service<vimbax_camera_msgs::srv::TriggerTime>::SharedPtr 
+    set_trigger_time_service_;
   rclcpp::Service<vimbax_camera_msgs::srv::FeaturesListGet>::SharedPtr
     features_list_get_service_;
   rclcpp::Service<vimbax_camera_msgs::srv::FeatureIntGet>::SharedPtr
