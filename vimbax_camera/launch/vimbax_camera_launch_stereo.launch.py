@@ -52,7 +52,8 @@ def generate_launch_description():
                 "camera_id": "DEV_00012C050ADF",
                 "settings_file": right_settings_file_path,
                 "use_ros_time": False,
-                "autostream": 1
+                "autostream": 1,
+                "buffer_count": 30
             }],
             output='screen',
             emulate_tty=True,
@@ -68,7 +69,8 @@ def generate_launch_description():
                 "camera_id": "DEV_00012C050ADD",
                 "settings_file": left_settings_file_path,
                 "use_ros_time": False,
-                "autostream": 1
+                "autostream": 1,
+                "buffer_count": 30
             }],
             output='screen',
             emulate_tty=True,
