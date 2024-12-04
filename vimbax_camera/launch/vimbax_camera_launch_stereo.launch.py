@@ -76,7 +76,14 @@ def generate_launch_description():
             emulate_tty=True,
             log_cmd=True,
             additional_env={'RCUTILS_LOGGING_SEVERITY_THRESHOLD': 'DEBUG'}
-        )
+        ),
+        Node(
+            package='vimbax_camera',
+            namespace='vimbax_stereo_trig',
+            executable='stereo_trig_node',
+            name='stereo_trig_node',
+            output='screen',
+        ),
     ])
 
 # Function to check if the settings files are accessible

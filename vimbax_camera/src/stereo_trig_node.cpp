@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdlib> // for std::system
 #include <memory>  // for std::shared_ptr
+#include <cmath>   // for ceil
 #include "vimbax_camera_msgs/srv/trigger_time.hpp" // Include your custom service definition
 
 using namespace std::chrono_literals;
@@ -11,6 +12,12 @@ using namespace std::chrono_literals;
 class StereoTrigNode : public rclcpp::Node {
 public:
     StereoTrigNode() : Node("stereo_trig_node") {
+        // Declare the FPS parameter with a default value
+        this->declare_parameter<int>("fps", 15);
+
+        // Get the FPS parameter value
+        this->get_parameter("fps", fps_);
+
         // Initialize parameters
         trigger_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
@@ -23,16 +30,22 @@ public:
     }
 
     ~StereoTrigNode() {
-        // Cleanup PWM signal
-        RCLCPP_INFO(this->get_logger(), "Disabling PWM signal...");
-        std::system("echo 0 > /sys/class/pwm/pwmchip0/pwm0/enable");
-        RCLCPP_INFO(this->get_logger(), "PWM signal disabled.");
+        // Cleanup PWM signal if it was exported
+        std::string command = "sudo /usr/local/bin/pwm_control.sh disable";
+        int ret = std::system(command.c_str());
+        if (ret == 0) {
+            RCLCPP_INFO(this->get_logger(), "PWM signal disabled.");
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "Failed to disable PWM signal. Command returned: %d", ret);
+        }
     }
+
 
 private:
     rclcpp::Time trigger_time_;
     rclcpp::Client<vimbax_camera_msgs::srv::TriggerTime>::SharedPtr left_camera_client_;
     rclcpp::Client<vimbax_camera_msgs::srv::TriggerTime>::SharedPtr right_camera_client_;
+    int fps_;
 
     void send_trigger_time(std::chrono::seconds delay) {
         RCLCPP_INFO(this->get_logger(), "Waiting for services to be available...");
@@ -93,16 +106,21 @@ private:
     }
 
     void trigger_cameras() {
-        // Execute the PWM commands to trigger cameras
-        RCLCPP_INFO(this->get_logger(), "Starting PWM signal to trigger cameras...");
+        // Calculate the period and duty cycle in nanoseconds
+        // Period = 1 / fps * 1e9 to get nanoseconds
+        int64_t period_ns = static_cast<int64_t>(std::ceil((1.0 / fps_) * 1e9));
+        int64_t duty_cycle_ns = period_ns / 2;  // Duty cycle is half the period
 
-        std::system("echo 0 > /sys/class/pwm/pwmchip0/export");
-        std::system("echo 66666666 > /sys/class/pwm/pwmchip0/pwm0/period");
-        std::system("echo 33333333 > /sys/class/pwm/pwmchip0/pwm0/duty_cycle");
-        std::system("echo 1 > /sys/class/pwm/pwmchip0/pwm0/enable");
-
-        RCLCPP_INFO(this->get_logger(), "PWM signal triggered at ROS time: %.9f", trigger_time_.seconds());
+        // Use the PWM control script with sudo to enable PWM
+        std::string command = "sudo /usr/local/bin/pwm_control.sh enable " + std::to_string(period_ns) + " " + std::to_string(duty_cycle_ns);
+        int ret = std::system(command.c_str());
+        if (ret == 0) {
+            RCLCPP_INFO(this->get_logger(), "PWM signal triggered at FPS: %d (period: %ld ns, duty cycle: %ld ns)", fps_, period_ns, duty_cycle_ns);
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "Failed to trigger PWM signal. Command returned: %d", ret);
+        }
     }
+
 };
 
 int main(int argc, char **argv) {
