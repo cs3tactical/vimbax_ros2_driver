@@ -61,20 +61,6 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-# Add multi_camera_synchronisation executable
-add_executable(multi_camera_synchronisation src/multi_camera_synchronisation.cpp)
-ament_target_dependencies(multi_camera_synchronisation rclcpp sensor_msgs)
-install(TARGETS
-        multi_camera_synchronisation
-        DESTINATION lib/${PROJECT_NAME})
-
-# Add stereo_sync_node executable
-add_executable(stereo_sync_node src/stereo_sync_node.cpp)
-ament_target_dependencies(stereo_sync_node rclcpp sensor_msgs builtin_interfaces)
-install(TARGETS
-        stereo_sync_node
-        DESTINATION lib/${PROJECT_NAME})
-
 # Add stereo_trig_node executable
 add_executable(stereo_trig_node src/stereo_trig_node.cpp)
 ament_target_dependencies(stereo_trig_node rclcpp sensor_msgs builtin_interfaces vimbax_camera_msgs)

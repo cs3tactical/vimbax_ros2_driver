@@ -31,15 +31,6 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 
-# Get the directory of the vimbax_camera package
-vimbax_camera_share_dir = get_package_share_directory('vimbax_camera')
-
-# Construct the absolute path to the settings files
-right_settings_file_path = os.path.join(vimbax_camera_share_dir, 'config', 'RIGHT_ZJ_PWM_TRIGED_BIN.xml')
-print("right_settings_file_path:", right_settings_file_path)
-left_settings_file_path = os.path.join(vimbax_camera_share_dir, 'config', 'LEFT_ZH_PWM_TRIGED_BIN.xml')
-print("left_settings_file_path", left_settings_file_path)
-
 def generate_launch_description():
 
     return LaunchDescription([
@@ -50,15 +41,11 @@ def generate_launch_description():
             name='vimbax_camera_right',
             parameters=[{
                 "camera_id": "DEV_00012C050ADF",
-                "settings_file": right_settings_file_path,
                 "use_ros_time": False,
                 "autostream": 1,
                 "buffer_count": 30
             }],
-            output='screen',
-            emulate_tty=True,
-            log_cmd=True,
-            additional_env={'RCUTILS_LOGGING_SEVERITY_THRESHOLD': 'DEBUG'}
+            output='screen'
         ),
         Node(
             package='vimbax_camera',
@@ -67,15 +54,11 @@ def generate_launch_description():
             name='vimbax_camera_left',
             parameters=[{
                 "camera_id": "DEV_00012C050ADD",
-                "settings_file": left_settings_file_path,
                 "use_ros_time": False,
                 "autostream": 1,
                 "buffer_count": 30
             }],
-            output='screen',
-            emulate_tty=True,
-            log_cmd=True,
-            additional_env={'RCUTILS_LOGGING_SEVERITY_THRESHOLD': 'DEBUG'}
+            output='screen'
         ),
         Node(
             package='vimbax_camera',
@@ -83,20 +66,5 @@ def generate_launch_description():
             executable='stereo_trig_node',
             name='stereo_trig_node',
             output='screen',
-        ),
+        )
     ])
-
-# Function to check if the settings files are accessible
-def check_settings_file(path):
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Settings file not found: {path}")
-    if not os.access(path, os.R_OK):
-        raise PermissionError(f"Settings file is not readable: {path}")
-
-# Check the settings files
-try:
-    check_settings_file(right_settings_file_path)
-    check_settings_file(left_settings_file_path)
-except (FileNotFoundError, PermissionError) as e:
-    print(e)
-
