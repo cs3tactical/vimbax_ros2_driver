@@ -309,6 +309,10 @@ bool VimbaXCameraNode::initialize_parameters()
   .set__description("Use ROS time instead of camera timestamp in image message header");
   node_->declare_parameter(parameter_use_ros_time, false, use_ros_time_param_desc);
 
+  auto const print_frame_info_param_desc = rcl_interfaces::msg::ParameterDescriptor{}
+    .set__description("Print frame information to console: id num and timestamp");
+  node_->declare_parameter(parameter_print_frame_info, false, print_frame_info_param_desc);
+
   parameter_callback_handle_ = node_->add_on_set_parameters_callback(
     [this](
       const std::vector<rclcpp::Parameter> & params) -> rcl_interfaces::msg::SetParametersResult {
@@ -1636,11 +1640,15 @@ result<void> VimbaXCameraNode::start_streaming()
         frame->header.stamp.nanosec = nanoseconds.count();
       }
 
-      // Log frame ID and associated timestamp
-      RCLCPP_INFO(get_logger(), "Frame ID: %ld, Timestamp: %d.%03u",
-                  frame->get_frame_id(),
-                  frame->header.stamp.sec,
-                  frame->header.stamp.nanosec);
+      if (node_->get_parameter(parameter_print_frame_info).as_bool())
+      {
+        // Log frame ID and associated timestamp
+        RCLCPP_INFO(get_logger(), "Frame ID: %ld, Timestamp: %d.%03u",
+                    frame->get_frame_id(),
+                    frame->header.stamp.sec,
+                    frame->header.stamp.nanosec);        
+      }
+
 
       auto const camera_info = [&] {
         auto const loaded_info = camera_info_manager_->getCameraInfo();
