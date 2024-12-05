@@ -137,6 +137,18 @@ bool VimbaXCameraNode::initialize(const rclcpp::NodeOptions & options)
 
 
   RCLCPP_INFO(get_logger(), "Initialization done!");
+
+  if (node_->get_parameter(parameter_stream_at_launch).as_bool())
+  {
+    // Start streaming automatically
+    auto result = start_streaming();
+    if (!result) {
+      RCLCPP_ERROR(get_logger(), "Failed to start streaming automatically: %s", result.error().to_error_msg().text.c_str());
+      return false;
+    }    
+  }
+
+
   return true;
 }
 
@@ -312,6 +324,10 @@ bool VimbaXCameraNode::initialize_parameters()
   auto const print_frame_info_param_desc = rcl_interfaces::msg::ParameterDescriptor{}
     .set__description("Print frame information to console: id num and timestamp");
   node_->declare_parameter(parameter_print_frame_info, false, print_frame_info_param_desc);
+
+  auto const parameter_stream_at_launch_param_desc = rcl_interfaces::msg::ParameterDescriptor{}
+    .set__description("Start stream after node launch");
+  node_->declare_parameter(parameter_stream_at_launch, false, parameter_stream_at_launch_param_desc);  
 
   parameter_callback_handle_ = node_->add_on_set_parameters_callback(
     [this](
@@ -1591,6 +1607,11 @@ result<void> VimbaXCameraNode::start_streaming()
 {
   if (!is_available_) {
     return error{VmbErrorNotFound};
+  }
+
+  if (is_streaming()) {
+    RCLCPP_WARN(get_logger(), "Camera is already streaming.");
+    return {};
   }
 
   auto const buffer_count = node_->get_parameter(parameter_buffer_count).as_int();

@@ -120,6 +120,7 @@ private:
   const std::string parameter_command_feature_timeout = "command_feature_timeout";
   const std::string parameter_use_ros_time = "use_ros_time";
   const std::string parameter_print_frame_info = "print_frame_info";
+  const std::string parameter_stream_at_launch = "stream_at_launch";
 
   std::atomic_bool stream_stopped_by_service_ = false;
   std::atomic_bool is_available_ = false;
