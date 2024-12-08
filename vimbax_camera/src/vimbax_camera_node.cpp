@@ -126,8 +126,21 @@ bool VimbaXCameraNode::initialize(const rclcpp::NodeOptions & options)
     return false;
   }
 
-  if (!initialize_graph_notify()) {
-    return false;
+  // Handle streaming based on the 'stream_at_launch' parameter
+  bool stream_at_launch = node_->get_parameter(parameter_stream_at_launch).as_bool();
+
+  if (stream_at_launch) {
+    // Start streaming automatically
+    auto result = start_streaming();
+    if (!result) {
+      RCLCPP_ERROR(get_logger(), "Failed to start streaming automatically: %s", result.error().to_error_msg().text.c_str());
+      return false;
+    }
+  } else {
+    // Set up the graph notify system for subscriber-based control if stream_at_launch is false
+    if (!initialize_graph_notify()) {
+      return false;
+    }
   }
 
   set_trigger_time_service_ = node_->create_service<vimbax_camera_msgs::srv::TriggerTime>(
@@ -135,19 +148,7 @@ bool VimbaXCameraNode::initialize(const rclcpp::NodeOptions & options)
     std::bind(&VimbaXCameraNode::handle_set_trigger_time, this, std::placeholders::_1, std::placeholders::_2)
   );
 
-
   RCLCPP_INFO(get_logger(), "Initialization done!");
-
-  if (node_->get_parameter(parameter_stream_at_launch).as_bool())
-  {
-    // Start streaming automatically
-    auto result = start_streaming();
-    if (!result) {
-      RCLCPP_ERROR(get_logger(), "Failed to start streaming automatically: %s", result.error().to_error_msg().text.c_str());
-      return false;
-    }    
-  }
-
 
   return true;
 }
