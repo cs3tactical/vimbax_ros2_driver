@@ -15,6 +15,10 @@ set(vimbax_camera_node_SRCS
         src/vimbax_camera_helper.cpp
 )
 
+# Add recorder node source
+set(stereo_recorder_SRCS
+        src/stereo_recorder_node.cpp)
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -26,7 +30,9 @@ find_package(vimbax_camera_events REQUIRED)
 find_package(vmbc_interface REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
-
+find_package(std_srvs REQUIRED)
+find_package(rosbag2_cpp REQUIRED)
+find_package(rosbag2_storage_default_plugins REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED ${vimbax_camera_node_SRCS})
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -51,14 +57,39 @@ rclcpp_components_register_node(${PROJECT_NAME}
     EXECUTOR MultiThreadedExecutor
 )
 
+# Add the recorder node as a shared library
+add_library(stereo_recorder_node SHARED ${stereo_recorder_SRCS})
+target_include_directories(stereo_recorder_node PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+target_compile_features(stereo_recorder_node PUBLIC c_std_99 cxx_std_17)
+ament_target_dependencies(
+        stereo_recorder_node
+        "rclcpp"
+        "rclcpp_components"
+        "sensor_msgs"
+        "std_srvs"
+        "builtin_interfaces"
+        "rosbag2_cpp"
+        "rosbag2_storage_default_plugins"
+)
+
+# Register the recorder node with rclcpp_components
+rclcpp_components_register_node(stereo_recorder_node
+    PLUGIN "stereo_recorder::StereoRecorder"
+    EXECUTABLE stereo_recorder
+)
+
+# Install the shared libraries
 install(TARGETS ${PROJECT_NAME}
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin
 )
-install(
-  DIRECTORY launch config
-  DESTINATION share/${PROJECT_NAME}
+install(TARGETS stereo_recorder_node
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
 )
 
 # Add stereo_trig_node executable

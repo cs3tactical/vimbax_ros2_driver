@@ -18,6 +18,11 @@
     <depend>vimbax_camera_msgs</depend>
     <depend>vimbax_camera_events</depend>
     <depend>vmbc_interface</depend>
+    <depend>std_srvs</depend>
+    <depend>rosbag2_cpp</depend>
+    <depend>rosbag2_storage_default_plugins</depend>
+    <depend>builtin_interfaces</depend>
+
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
