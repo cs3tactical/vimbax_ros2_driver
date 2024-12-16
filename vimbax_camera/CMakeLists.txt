@@ -19,7 +19,11 @@ set(vimbax_camera_node_SRCS
 set(stereo_recorder_SRCS
         src/stereo_recorder_node.cpp)
 
-# find dependencies
+# Add simple node recorder source
+set(simple_node_recorder_SRCS
+        src/simple_node_recorder.cpp)
+
+# Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
@@ -79,6 +83,20 @@ rclcpp_components_register_node(stereo_recorder_node
     PLUGIN "stereo_recorder::StereoRecorder"
     EXECUTABLE stereo_recorder
 )
+
+# Add the simple node recorder as a standalone executable
+add_executable(simple_node_recorder ${simple_node_recorder_SRCS})
+ament_target_dependencies(
+    simple_node_recorder
+    "rclcpp"
+    "rclcpp_components"
+    "sensor_msgs"
+    "std_srvs"
+    "rosbag2_cpp"
+    "rosbag2_storage_default_plugins"
+)
+install(TARGETS simple_node_recorder
+        DESTINATION lib/${PROJECT_NAME})
 
 # Install the shared libraries
 install(TARGETS ${PROJECT_NAME}

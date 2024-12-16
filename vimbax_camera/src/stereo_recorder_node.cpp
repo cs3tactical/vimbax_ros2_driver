@@ -18,13 +18,12 @@ public:
     StereoRecorder(const rclcpp::NodeOptions &options)
         : Node("stereo_recorder", options), is_recording_(false)
     {
-        this->declare_parameter<std::string>("topic_left", "/camera/left/image_raw");
-        this->declare_parameter<std::string>("topic_right", "/camera/right/image_raw");
-        this->declare_parameter<std::string>("topic_camera_info_left", "/camera/left/camera_info");
-        this->declare_parameter<std::string>("topic_camera_info_right", "/camera/right/camera_info");
+        this->declare_parameter<std::string>("topic_left", "/vimbax_camera_left/image_raw");
+        this->declare_parameter<std::string>("topic_right", "/vimbax_camera_right/image_raw");
+        this->declare_parameter<std::string>("topic_camera_info_left", "/vimbax_camera_left/camera_info");
+        this->declare_parameter<std::string>("topic_camera_info_right", "/vimbax_camera_right/camera_info");
         this->declare_parameter<std::string>("recording_name", "stereo_recording");
-        this->declare_parameter<std::string>("recording_path", "/tmp");
-        this->declare_parameter<std::string>("recording_format", "mcap");
+        this->declare_parameter<std::string>("recording_path", "/home/peterpan/stereo_bag");
 
         this->get_parameter("topic_left", topic_left_);
         this->get_parameter("topic_right", topic_right_);
@@ -32,16 +31,19 @@ public:
         this->get_parameter("topic_camera_info_right", topic_camera_info_right_);
         this->get_parameter("recording_name", recording_name_);
         this->get_parameter("recording_path", recording_path_);
-        this->get_parameter("recording_format", recording_format_);
+
+        auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(100))
+                            .best_effort()
+                            .durability_volatile();
 
         left_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-            topic_left_, 10, std::bind(&StereoRecorder::leftImageCallback, this, std::placeholders::_1));
+            topic_left_, qos_profile, std::bind(&StereoRecorder::leftImageCallback, this, std::placeholders::_1));
         right_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-            topic_right_, 10, std::bind(&StereoRecorder::rightImageCallback, this, std::placeholders::_1));
+            topic_right_, qos_profile, std::bind(&StereoRecorder::rightImageCallback, this, std::placeholders::_1));
         left_camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-            topic_camera_info_left_, 10, std::bind(&StereoRecorder::leftCameraInfoCallback, this, std::placeholders::_1));
+            topic_camera_info_left_, qos_profile, std::bind(&StereoRecorder::leftCameraInfoCallback, this, std::placeholders::_1));
         right_camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-            topic_camera_info_right_, 10, std::bind(&StereoRecorder::rightCameraInfoCallback, this, std::placeholders::_1));
+            topic_camera_info_right_, qos_profile, std::bind(&StereoRecorder::rightCameraInfoCallback, this, std::placeholders::_1));
 
         start_record_service_ = this->create_service<std_srvs::srv::Trigger>(
             "start_record", std::bind(&StereoRecorder::startRecord, this, std::placeholders::_1, std::placeholders::_2));
@@ -65,11 +67,11 @@ private:
         std::time_t t = std::time(0);
         std::tm* now = std::localtime(&t);
         std::string timestamp = std::to_string(now->tm_year + 1900) + "_" +
-                                 std::to_string(now->tm_mon + 1) + "_" +
-                                 std::to_string(now->tm_mday) + "-" +
-                                 std::to_string(now->tm_hour) + "_" +
-                                 std::to_string(now->tm_min) + "_" +
-                                 std::to_string(now->tm_sec);
+                                std::to_string(now->tm_mon + 1) + "_" +
+                                std::to_string(now->tm_mday) + "-" +
+                                std::to_string(now->tm_hour) + "_" +
+                                std::to_string(now->tm_min) + "_" +
+                                std::to_string(now->tm_sec);
 
         std::filesystem::path bag_file_path = std::filesystem::path(recording_path_) / (recording_name_ + "_" + timestamp);
 
@@ -79,15 +81,32 @@ private:
 
         rosbag2_cpp::ConverterOptions converter_options;
         converter_options.input_serialization_format = "cdr";
-        converter_options.output_serialization_format = recording_format_;
+        converter_options.output_serialization_format = "cdr";
 
         writer_ = std::make_unique<rosbag2_cpp::writers::SequentialWriter>();
         writer_->open(storage_options, converter_options);
+
+        // Create topics for recording
+        rosbag2_storage::TopicMetadata left_image_metadata = {
+            topic_left_, "sensor_msgs/msg/Image", "cdr"};
+        rosbag2_storage::TopicMetadata right_image_metadata = {
+            topic_right_, "sensor_msgs/msg/Image", "cdr"};
+        rosbag2_storage::TopicMetadata left_camera_info_metadata = {
+            topic_camera_info_left_, "sensor_msgs/msg/CameraInfo", "cdr"};
+        rosbag2_storage::TopicMetadata right_camera_info_metadata = {
+            topic_camera_info_right_, "sensor_msgs/msg/CameraInfo", "cdr"};
+
+        writer_->create_topic(left_image_metadata);
+        writer_->create_topic(right_image_metadata);
+        writer_->create_topic(left_camera_info_metadata);
+        writer_->create_topic(right_camera_info_metadata);
 
         is_recording_ = true;
 
         RCLCPP_INFO(this->get_logger(), "Recording started at %s", bag_file_path.string().c_str());
     }
+
+
 
     void stopRecordingInternal()
     {
@@ -111,9 +130,8 @@ private:
             rclcpp::SerializedMessage serialized_data;
             serializer.serialize_message(msg.get(), &serialized_data);
 
-            serialized_msg->serialized_data = std::make_shared<std::vector<uint8_t>>(
-                serialized_data.get_rcl_serialized_message().buffer,
-                serialized_data.get_rcl_serialized_message().buffer + serialized_data.size());
+            serialized_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
+            *serialized_msg->serialized_data = serialized_data.get_rcl_serialized_message();
 
             writer_->write(serialized_msg);
         }
@@ -131,9 +149,8 @@ private:
             rclcpp::SerializedMessage serialized_data;
             serializer.serialize_message(msg.get(), &serialized_data);
 
-            serialized_msg->serialized_data = std::make_shared<std::vector<uint8_t>>(
-                serialized_data.get_rcl_serialized_message().buffer,
-                serialized_data.get_rcl_serialized_message().buffer + serialized_data.size());
+            serialized_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
+            *serialized_msg->serialized_data = serialized_data.get_rcl_serialized_message();
 
             writer_->write(serialized_msg);
         }
@@ -151,9 +168,8 @@ private:
             rclcpp::SerializedMessage serialized_data;
             serializer.serialize_message(msg.get(), &serialized_data);
 
-            serialized_msg->serialized_data = std::make_shared<std::vector<uint8_t>>(
-                serialized_data.get_rcl_serialized_message().buffer,
-                serialized_data.get_rcl_serialized_message().buffer + serialized_data.size());
+            serialized_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
+            *serialized_msg->serialized_data = serialized_data.get_rcl_serialized_message();
 
             writer_->write(serialized_msg);
         }
@@ -171,9 +187,8 @@ private:
             rclcpp::SerializedMessage serialized_data;
             serializer.serialize_message(msg.get(), &serialized_data);
 
-            serialized_msg->serialized_data = std::make_shared<std::vector<uint8_t>>(
-                serialized_data.get_rcl_serialized_message().buffer,
-                serialized_data.get_rcl_serialized_message().buffer + serialized_data.size());
+            serialized_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
+            *serialized_msg->serialized_data = serialized_data.get_rcl_serialized_message();
 
             writer_->write(serialized_msg);
         }
@@ -182,6 +197,7 @@ private:
     void startRecord(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                      std::shared_ptr<std_srvs::srv::Trigger::Response> response)
     {
+        RCLCPP_INFO(this->get_logger(), "Start record service received.");
         if (is_recording_)
         {
             response->success = false;
@@ -218,7 +234,6 @@ private:
     std::string topic_camera_info_right_;
     std::string recording_name_;
     std::string recording_path_;
-    std::string recording_format_;
 
     // State
     bool is_recording_;
@@ -239,3 +254,18 @@ private:
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(stereo_recorder::StereoRecorder)
+
+int main(int argc, char *argv[])
+{
+    rclcpp::init(argc, argv);
+
+    // Create the node with default options
+    auto node = std::make_shared<stereo_recorder::StereoRecorder>(rclcpp::NodeOptions());
+
+    // Spin the node
+    rclcpp::spin(node);
+
+    // Shutdown the ROS2 system after the node stops
+    rclcpp::shutdown();
+    return 0;
+}
