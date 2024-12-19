@@ -106,8 +106,6 @@ private:
         RCLCPP_INFO(this->get_logger(), "Recording started at %s", bag_file_path.string().c_str());
     }
 
-
-
     void stopRecordingInternal()
     {
         if (writer_)

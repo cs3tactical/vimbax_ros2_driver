@@ -1661,16 +1661,24 @@ result<void> VimbaXCameraNode::start_streaming()
         frame->header.stamp.sec = int32_t(seconds.count());
         frame->header.stamp.nanosec = nanoseconds.count();
       }
-
+      
       if (node_->get_parameter(parameter_print_frame_info).as_bool())
       {
+        // Calculate and print FPS if enabled
+        double current_frame_time = static_cast<double>(frame->get_timestamp_ns()) * 1e-9; // Convert to seconds
+        double fps = 0.0;
+        if (last_frame_time_) {
+          fps = 1.0 / (current_frame_time - *last_frame_time_);
+        }
+        last_frame_time_ = current_frame_time;
+
         // Log frame ID and associated timestamp
-        RCLCPP_INFO(get_logger(), "Frame ID: %ld, Timestamp: %d.%03u",
+        RCLCPP_INFO(get_logger(), "Frame ID: %ld, Timestamp: %d.%4u, FPS: %.2f",
                     frame->get_frame_id(),
                     frame->header.stamp.sec,
-                    frame->header.stamp.nanosec);        
+                    frame->header.stamp.nanosec,
+                    fps);        
       }
-
 
       auto const camera_info = [&] {
         auto const loaded_info = camera_info_manager_->getCameraInfo();
