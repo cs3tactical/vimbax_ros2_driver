@@ -31,7 +31,7 @@ public:
 
     ~StereoTrigNode() {
         // Cleanup PWM signal if it was exported
-        std::string command = "sudo /usr/local/bin/pwm_control.sh disable";
+        std::string command = "sudo /usr/local/bin/pwm_control.sh 0 disable";
         int ret = std::system(command.c_str());
         if (ret == 0) {
             RCLCPP_INFO(this->get_logger(), "PWM signal disabled.");
@@ -108,14 +108,14 @@ private:
     void trigger_cameras() {
         // Calculate the period and duty cycle in nanoseconds
         // Period = 1 / fps * 1e9 to get nanoseconds
-        int64_t period_ns = static_cast<int64_t>(std::ceil((1.0 / fps_) * 1e9));
-        int64_t duty_cycle_ns = period_ns / 2;  // Duty cycle is half the period
+        // int64_t period_ns = static_cast<int64_t>(std::ceil((1.0 / fps_) * 1e9));
+        int64_t duty_cycle_ns = 50;  // Duty cycle is half the period
 
         // Use the PWM control script with sudo to enable PWM
-        std::string command = "sudo /usr/local/bin/pwm_control.sh enable " + std::to_string(period_ns) + " " + std::to_string(duty_cycle_ns);
+        std::string command = "sudo /usr/local/bin/pwm_control.sh 0 " + std::to_string(fps_) + " " + std::to_string(duty_cycle_ns);
         int ret = std::system(command.c_str());
         if (ret == 0) {
-            RCLCPP_INFO(this->get_logger(), "PWM signal triggered at FPS: %d (period: %ld ns, duty cycle: %ld ns)", fps_, period_ns, duty_cycle_ns);
+            RCLCPP_INFO(this->get_logger(), "PWM signal triggered at %d FPS", fps_);
         } else {
             RCLCPP_ERROR(this->get_logger(), "Failed to trigger PWM signal. Command returned: %d", ret);
         }
