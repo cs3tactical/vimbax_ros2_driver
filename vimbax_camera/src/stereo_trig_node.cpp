@@ -26,7 +26,7 @@ public:
         right_camera_client_ = this->create_client<vimbax_camera_msgs::srv::TriggerTime>("/vimbax_camera_right/set_trigger_time");
 
         // Initialize synchronization process
-        send_trigger_time(1s);
+        send_trigger_time(std::chrono::milliseconds(100));
     }
 
     ~StereoTrigNode() {
@@ -47,7 +47,7 @@ private:
     rclcpp::Client<vimbax_camera_msgs::srv::TriggerTime>::SharedPtr right_camera_client_;
     int fps_;
 
-    void send_trigger_time(std::chrono::seconds delay) {
+    void send_trigger_time(std::chrono::milliseconds delay) {
         RCLCPP_INFO(this->get_logger(), "Waiting for services to be available...");
         left_camera_client_->wait_for_service();
         right_camera_client_->wait_for_service();
@@ -55,7 +55,7 @@ private:
         RCLCPP_INFO(this->get_logger(), "Services available in both cameras");
 
         // Set the trigger time to current time + delay
-        trigger_time_ = this->get_clock()->now() + rclcpp::Duration::from_seconds(delay.count());
+        trigger_time_ = this->get_clock()->now() + rclcpp::Duration(delay);
 
         auto request = std::make_shared<vimbax_camera_msgs::srv::TriggerTime::Request>();
         request->trigger_time = trigger_time_;

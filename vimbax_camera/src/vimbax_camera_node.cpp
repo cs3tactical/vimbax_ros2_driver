@@ -1632,13 +1632,16 @@ result<void> VimbaXCameraNode::start_streaming()
         }
       }
       else {
-        // save the first frame timestamp for streo sync
-        start_time_ = frame->get_timestamp_ns();
+        if (timestamp_service_received_) {
+          // save the first frame timestamp for streo sync
+          start_time_ = frame->get_timestamp_ns();
+          trigger_time_ = node_->now();
+          RCLCPP_INFO(get_logger(), "Trigger time changed to current ros time: %.9f", trigger_time_.seconds());         
+        }
       }
       last_frame_id_ = frame->get_frame_id();
 
       frame->header.set__frame_id(node_->get_parameter(parameter_frame_id).as_string());
-
 
       if (timestamp_service_received_) {
         // Timestamp correction logic if service call has been received
@@ -1646,6 +1649,10 @@ result<void> VimbaXCameraNode::start_streaming()
         double time_offset = (current_camera_time - start_time_) * 1e-9;  // convert nanoseconds to seconds
         rclcpp::Time corrected_time = trigger_time_ + rclcpp::Duration::from_seconds(time_offset);
         frame->header.stamp = corrected_time;
+        if (last_frame_id_ == 0) {
+          // Print first frame timestamp
+          RCLCPP_INFO(get_logger(), "First frame timestamp: %.9f", corrected_time.seconds());
+        }
       } 
       else if (node_->get_parameter(parameter_use_ros_time).as_bool()) 
       {
@@ -1758,7 +1765,7 @@ void VimbaXCameraNode::handle_set_trigger_time(
   trigger_time_ = rclcpp::Time(request->trigger_time);
   timestamp_service_received_ = true;
 
-  RCLCPP_INFO(node_->get_logger(), "Trigger time set to %d.%d",
+  RCLCPP_INFO(node_->get_logger(), "Predicted Trigger time set to %d.%d",
               request->trigger_time.sec, request->trigger_time.nanosec);
   
   response->success = true;
