@@ -38,6 +38,7 @@
 #include <atomic>
 
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include <image_transport/image_transport.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
@@ -121,6 +122,8 @@ private:
   const std::string parameter_use_ros_time = "use_ros_time";
   const std::string parameter_print_frame_info = "print_frame_info";
   const std::string parameter_stream_at_launch = "stream_at_launch";
+  const std::string parameter_publish_time_offset = "publish_time_offset";
+
 
   std::atomic_bool stream_stopped_by_service_ = false;
   std::atomic_bool is_available_ = false;
@@ -165,6 +168,8 @@ private:
 
   // Publishers
   image_transport::CameraPublisher camera_publisher_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr 
+    timestamp_offset_publisher_;
 
   // Services
   rclcpp::Service<vimbax_camera_msgs::srv::TriggerTime>::SharedPtr 

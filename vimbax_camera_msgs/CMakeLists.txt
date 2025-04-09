@@ -18,6 +18,7 @@ set(vimbax_camera_MSGS
     msg/Error.msg
     msg/FeatureModule.msg
     msg/TriggerInfo.msg
+    msg/StereoSyncStatus.msg
 )
 
 set(vimbax_camera_SRVS

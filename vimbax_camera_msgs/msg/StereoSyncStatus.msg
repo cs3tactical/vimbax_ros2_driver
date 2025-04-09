@@ -1,0 +1,9 @@
+uint32 frame_id
+float64 ros_left
+float64 ros_right
+float64 ros_offset
+float64 start_offset
+float64 moving_avg_ros_offset
+float64 moving_avg_start_offset
+float64 left_start_time
+float64 right_start_time

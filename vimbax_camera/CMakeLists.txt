@@ -66,7 +66,22 @@ add_executable(stereo_trig_node src/stereo_trig_node.cpp)
 ament_target_dependencies(stereo_trig_node rclcpp sensor_msgs builtin_interfaces vimbax_camera_msgs)
 install(TARGETS
         stereo_trig_node
-        DESTINATION lib/${PROJECT_NAME})        
+        DESTINATION lib/${PROJECT_NAME}) 
+        
+# Add timestamp_sync_node executable
+add_executable(timestamp_sync_node src/timestamp_sync_node.cpp)
+ament_target_dependencies(timestamp_sync_node
+  rclcpp
+  std_msgs
+  sensor_msgs
+  vimbax_camera_msgs
+)
+
+install(TARGETS
+        timestamp_sync_node
+        DESTINATION lib/${PROJECT_NAME}
+)
+     
 
 # Install launch files.
 install(DIRECTORY

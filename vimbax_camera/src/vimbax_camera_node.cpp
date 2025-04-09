@@ -330,6 +330,10 @@ bool VimbaXCameraNode::initialize_parameters()
     .set__description("Start stream after node launch");
   node_->declare_parameter(parameter_stream_at_launch, false, parameter_stream_at_launch_param_desc);  
 
+  auto const publish_time_offset_param_desc = rcl_interfaces::msg::ParameterDescriptor{}
+    .set__description("Publish frame timestamps and offset during streaming");
+  node_->declare_parameter(parameter_publish_time_offset, false, publish_time_offset_param_desc);
+
   parameter_callback_handle_ = node_->add_on_set_parameters_callback(
     [this](
       const std::vector<rclcpp::Parameter> & params) -> rcl_interfaces::msg::SetParametersResult {
@@ -385,6 +389,13 @@ bool VimbaXCameraNode::initialize_publisher()
   if (!camera_publisher_) {
     return false;
   }
+
+  timestamp_offset_publisher_ = node_->create_publisher<std_msgs::msg::String>("timestamp_offset", rclcpp::QoS(10));
+  
+  if (!timestamp_offset_publisher_) {
+    return false;
+  }
+  
 
   return true;
 }
@@ -1635,8 +1646,8 @@ result<void> VimbaXCameraNode::start_streaming()
         if (timestamp_service_received_) {
           // save the first frame timestamp for streo sync
           start_time_ = frame->get_timestamp_ns();
-          trigger_time_ = node_->now();
-          RCLCPP_INFO(get_logger(), "Trigger time changed to current ros time: %.9f", trigger_time_.seconds());         
+          // trigger_time_ = node_->now();
+          // RCLCPP_INFO(get_logger(), "Trigger time changed to current ros time: %.9f", trigger_time_.seconds());         
         }
       }
       last_frame_id_ = frame->get_frame_id();
@@ -1649,6 +1660,32 @@ result<void> VimbaXCameraNode::start_streaming()
         double time_offset = (current_camera_time - start_time_) * 1e-9;  // convert nanoseconds to seconds
         rclcpp::Time corrected_time = trigger_time_ + rclcpp::Duration::from_seconds(time_offset);
         frame->header.stamp = corrected_time;
+        
+        // Publish timestamp offset if enabled
+        if (node_->get_parameter(parameter_publish_time_offset).as_bool()) {
+          std_msgs::msg::String msg;
+          std::stringstream ss;
+
+          ss << std::fixed << std::setprecision(9);
+      
+          double ros_time = corrected_time.seconds();
+          double camera_time = current_camera_time * 1e-9;
+          double time_from_start = time_offset;
+      
+          static double last_time_from_start = 0.0;
+          double frame_offset = time_from_start - last_time_from_start;
+          last_time_from_start = time_from_start;
+      
+          ss << frame->get_frame_id() << ", "
+             << ros_time << ", "
+             << camera_time << ", "
+             << time_from_start << ", "
+             << frame_offset;
+      
+          msg.data = ss.str();
+          timestamp_offset_publisher_->publish(msg);
+        }
+
         if (last_frame_id_ == 0) {
           // Print first frame timestamp
           RCLCPP_INFO(get_logger(), "First frame timestamp: %.9f", corrected_time.seconds());
