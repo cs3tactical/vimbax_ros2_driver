@@ -13,6 +13,7 @@ set(vimbax_camera_node_SRCS
         src/loader/vmbc_api.cpp
         src/vimbax_camera.cpp
         src/vimbax_camera_helper.cpp
+        src/camera_interface.cpp
 )
 
 # find dependencies
@@ -81,7 +82,18 @@ install(TARGETS
         timestamp_sync_node
         DESTINATION lib/${PROJECT_NAME}
 )
-     
+
+# Add camera_interface_test_node executable
+add_executable(camera_interface_test_node src/camera_interface_test_node.cpp)
+ament_target_dependencies(camera_interface_test_node
+  rclcpp
+  sensor_msgs
+)
+target_link_libraries(camera_interface_test_node ${PROJECT_NAME})
+install(TARGETS
+        camera_interface_test_node
+        DESTINATION lib/${PROJECT_NAME}
+)     
 
 # Install launch files.
 install(DIRECTORY
