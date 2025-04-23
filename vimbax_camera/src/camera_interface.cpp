@@ -32,7 +32,7 @@ EncodingInfo get_encoding_from_pixel_format(const std::string & pixel_format)
 
 // Constructor
 CameraInterface::CameraInterface(
-  const rclcpp::Node::SharedPtr & node,
+  rclcpp::Node * node,
   const std::string & camera_id)
 : node_(node), camera_id_(camera_id)
 {

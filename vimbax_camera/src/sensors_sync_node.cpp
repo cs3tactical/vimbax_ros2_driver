@@ -17,7 +17,9 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   pwm_freq_ = this->declare_parameter<int>("pwm_frequency", 105);
   pwm_divider_ = this->declare_parameter<int>("pwm_divider", 7);
   pwm_duty_ = this->declare_parameter<int>("pwm_duty", 50);
-  buffer_count_ = this->declare_parameter<int>("buffer_count", 10);
+  warning_topic_ = this->declare_parameter<std::string>("warning_topic", "/diagnostics/stereo_warnings");
+  camera_buffer_duration_ = this->declare_parameter<double>("camera_buffer_duration", 3.0);
+  imu_buffer_duration_ = this->declare_parameter<double>("imu_buffer_duration", 3.0);
 
   left_info_mgr_ = std::make_shared<camera_info_manager::CameraInfoManager>(
     this, left_camera_id_, left_camera_info_url_);
@@ -28,15 +30,13 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   right_pub_ = this->create_publisher<ImageMsg>("camera_right/image_raw", 10);
   left_info_pub_ = this->create_publisher<CameraInfoMsg>("camera_left/camera_info", 10);
   right_info_pub_ = this->create_publisher<CameraInfoMsg>("camera_right/camera_info", 10);
+  warning_pub_ = this->create_publisher<std_msgs::msg::String>(warning_topic_, 10);
 }
 
 bool SensorsSyncNode::initialize()
 {
-  auto self_node = std::static_pointer_cast<rclcpp::Node>(
-    std::enable_shared_from_this<SensorsSyncNode>::shared_from_this());
-  
-  left_camera_ = std::make_unique<CameraInterface>(self_node, left_camera_id_);
-  right_camera_ = std::make_unique<CameraInterface>(self_node, right_camera_id_);
+  left_camera_ = std::make_unique<CameraInterface>(this, left_camera_id_);
+  right_camera_ = std::make_unique<CameraInterface>(this, right_camera_id_);
 
   if (!left_camera_->initialize(
           [this](const CameraFrame & f) { this->left_frame_callback(f); })) {
@@ -90,7 +90,11 @@ void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   imu_buffer_.push_back(msg);
-  if (imu_buffer_.size() > 100) imu_buffer_.pop_front();
+  imu_msg_count_++;
+  // RCLCPP_INFO(this->get_logger(),
+  //   "Received IMU message [%zu] - timestamp: %.6f",
+  //   imu_msg_count_,
+  //   msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9);
   sync_and_publish_frames();
 }
 
@@ -98,7 +102,10 @@ void SensorsSyncNode::left_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   left_buffer_.push_back(frame);
-  if (left_buffer_.size() > 15) left_buffer_.pop_front();
+  // RCLCPP_INFO(this->get_logger(),
+  //   "Received frame from LEFT camera - frame_id: %lu, timestamp: %.6f",
+  //   frame.frame_id,
+  //   frame.internal_timestamp_ns / 1e9);
   sync_and_publish_frames();
 }
 
@@ -106,55 +113,108 @@ void SensorsSyncNode::right_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   right_buffer_.push_back(frame);
-  if (right_buffer_.size() > 15) right_buffer_.pop_front();
+  // RCLCPP_INFO(this->get_logger(),
+  //   "Received frame from RIGHT camera - frame_id: %lu, timestamp: %.6f",
+  //   frame.frame_id,
+  //   frame.internal_timestamp_ns / 1e9);
   sync_and_publish_frames();
 }
 
 void SensorsSyncNode::sync_and_publish_frames()
 {
-  while (!left_buffer_.empty() && !right_buffer_.empty() && !imu_buffer_.empty()) {
-    auto & l = left_buffer_.front();
-    auto & r = right_buffer_.front();
+  auto now = this->now();
 
-    if (l.frame_id != r.frame_id) {
-      if (l.frame_id < r.frame_id)
-        left_buffer_.pop_front();
-      else
-        right_buffer_.pop_front();
-      continue;
+  auto trim_old = [&](auto & buffer, auto get_time, double threshold) {
+    while (!buffer.empty() && (now - get_time(buffer.front())).seconds() > threshold) {
+      buffer.pop_front();
     }
+  };
 
-    uint64_t expected_frame = last_synced_frame_id_ + 1;
-    if (l.frame_id != expected_frame) {
+  trim_old(left_buffer_, [](const CameraFrame & f) {
+    return rclcpp::Time(f.image.header.stamp);
+  }, camera_buffer_duration_);
+  trim_old(right_buffer_, [](const CameraFrame & f) {
+    return rclcpp::Time(f.image.header.stamp);
+  }, camera_buffer_duration_);
+  trim_old(imu_buffer_, [](const ImuMsg::SharedPtr & msg) {
+    return msg->header.stamp;
+  }, imu_buffer_duration_);
+
+  if (left_buffer_.empty() || right_buffer_.empty()) return;
+
+  CameraFrame *left = nullptr;
+  CameraFrame *right = nullptr;
+
+  // Iterate through left_buffer_ to find the earliest matching frame_id in right_buffer_
+  for (auto & l : left_buffer_) {
+    auto it = std::find_if(right_buffer_.begin(), right_buffer_.end(),
+                           [&](const CameraFrame & r) { return r.frame_id == l.frame_id; });
+    if (it != right_buffer_.end()) {
+      left = &l;
+      right = &(*it);
+      RCLCPP_INFO(this->get_logger(), "[SyncNode] Found matching stereo pair with frame_id: %lu", l.frame_id);
       break;
     }
-
-    size_t imu_index = expected_frame * pwm_divider_;
-    if (imu_index >= imu_buffer_.size()) {
-      break;
-    }
-
-    auto imu_msg = imu_buffer_[imu_index];
-    l.image.header.stamp = imu_msg->header.stamp;
-    r.image.header.stamp = imu_msg->header.stamp;
-
-    auto left_info = left_info_mgr_->getCameraInfo();
-    auto right_info = right_info_mgr_->getCameraInfo();
-    left_info.header = l.image.header;
-    right_info.header = r.image.header;
-
-    left_pub_->publish(l.image);
-    right_pub_->publish(r.image);
-    left_info_pub_->publish(left_info);
-    right_info_pub_->publish(right_info);
-
-    last_synced_frame_id_ = l.frame_id;
-    last_imu_time_ = imu_msg->header.stamp;
-
-    left_buffer_.pop_front();
-    right_buffer_.pop_front();
   }
+
+  if (!left || !right) {
+    auto warn = std_msgs::msg::String();
+    warn.data = "[SyncNode] No matching stereo pair found.";
+    warning_pub_->publish(warn);
+    return;
+  }
+
+  if (left->frame_id == 0 && !camera_time_initialized_) {
+    camera_start_ts_left_ = left->internal_timestamp_ns;
+    camera_start_ts_right_ = right->internal_timestamp_ns;
+    imu_start_time_ = imu_buffer_.front()->header.stamp;
+    camera_time_initialized_ = true;
+  }
+
+  if (!camera_time_initialized_) return;
+
+  uint64_t dt_left = left->internal_timestamp_ns - camera_start_ts_left_;
+  uint64_t dt_right = right->internal_timestamp_ns - camera_start_ts_right_;
+  uint64_t avg_offset_ns = (dt_left + dt_right) / 2;
+  rclcpp::Time predicted_stamp = imu_start_time_ + rclcpp::Duration::from_nanoseconds(avg_offset_ns);
+
+  rclcpp::Time best_imu_stamp = predicted_stamp;
+  rclcpp::Duration min_diff = rclcpp::Duration::from_seconds(1.0);
+  for (auto & imu : imu_buffer_) {
+    rclcpp::Time imu_time = imu->header.stamp;
+    auto diff = std::abs((imu_time - predicted_stamp).nanoseconds());
+    if (diff < min_diff.nanoseconds()) {
+      best_imu_stamp = imu_time;
+      min_diff = rclcpp::Duration::from_nanoseconds(diff);
+    }
+  }
+
+  rclcpp::Time final_stamp = min_diff.nanoseconds() < 2000000 ? best_imu_stamp : predicted_stamp;
+
+  left->image.header.stamp = final_stamp;
+  right->image.header.stamp = final_stamp;
+
+  auto left_info = left_info_mgr_->getCameraInfo();
+  auto right_info = right_info_mgr_->getCameraInfo();
+  left_info.header.stamp = final_stamp;
+  right_info.header.stamp = final_stamp;
+
+  left_pub_->publish(left->image);
+  right_pub_->publish(right->image);
+  left_info_pub_->publish(left_info);
+  right_info_pub_->publish(right_info);
+
+  last_synced_frame_id_ = left->frame_id;
+
+  left_buffer_.erase(std::remove_if(left_buffer_.begin(), left_buffer_.end(),
+    [&](const CameraFrame & f) { return f.frame_id <= last_synced_frame_id_; }),
+    left_buffer_.end());
+
+  right_buffer_.erase(std::remove_if(right_buffer_.begin(), right_buffer_.end(),
+    [&](const CameraFrame & f) { return f.frame_id <= last_synced_frame_id_; }),
+    right_buffer_.end());
 }
+
 
 }  // namespace vimbax_camera
 

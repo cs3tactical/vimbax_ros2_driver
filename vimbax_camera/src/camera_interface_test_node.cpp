@@ -12,7 +12,7 @@ int main(int argc, char ** argv)
   auto pub = image_transport::create_camera_publisher(node.get(), "image_raw");
 
   std::string camera_id = "DEV_00012C050ADD";  // use actual ID if needed
-  CameraInterface camera(node, camera_id);
+  CameraInterface camera(node.get(), camera_id);
 
   bool ok = camera.initialize([&](const CameraFrame & frame) {
     static int count = 0;

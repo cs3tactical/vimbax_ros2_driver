@@ -4,6 +4,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
 
 #include <deque>
@@ -48,6 +49,9 @@ private:
   std::shared_ptr<camera_info_manager::CameraInfoManager> left_info_mgr_;
   std::shared_ptr<camera_info_manager::CameraInfoManager> right_info_mgr_;
 
+  size_t imu_msg_count_ = 0;
+  uint64_t expected_frame_id_ = 0;
+
   // Params
   std::string left_camera_id_;
   std::string right_camera_id_;
@@ -58,6 +62,9 @@ private:
   int pwm_divider_;
   int pwm_duty_;
   int buffer_count_;
+  std::string warning_topic_;
+  double camera_buffer_duration_;
+  double imu_buffer_duration_;  
 
   // Buffers
   std::deque<CameraFrame> left_buffer_;
@@ -69,11 +76,18 @@ private:
   uint64_t last_synced_frame_id_ = 0;
   rclcpp::Time last_imu_time_;
 
+  // Time sync references
+  bool camera_time_initialized_ = false;
+  uint64_t camera_start_ts_left_ = 0;
+  uint64_t camera_start_ts_right_ = 0;
+  rclcpp::Time imu_start_time_;  
+
   // Publishers
   rclcpp::Publisher<ImageMsg>::SharedPtr left_pub_;
   rclcpp::Publisher<ImageMsg>::SharedPtr right_pub_;
   rclcpp::Publisher<CameraInfoMsg>::SharedPtr left_info_pub_;
   rclcpp::Publisher<CameraInfoMsg>::SharedPtr right_info_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr warning_pub_;
   rclcpp::Subscription<ImuMsg>::SharedPtr imu_sub_;
 };
 

@@ -27,14 +27,14 @@ class CameraInterface
 public:
   using FrameCallback = std::function<void(const CameraFrame &)>;
 
-  CameraInterface(const rclcpp::Node::SharedPtr & node, const std::string & camera_id);
+  CameraInterface(rclcpp::Node * node, const std::string & camera_id);
   ~CameraInterface();
 
   bool initialize(FrameCallback callback);
   bool is_ready() const;
 
 private:
-  rclcpp::Node::SharedPtr node_;
+  rclcpp::Node * node_;
   std::string camera_id_;
   bool ready_ = false;
   FrameCallback frame_callback_;
