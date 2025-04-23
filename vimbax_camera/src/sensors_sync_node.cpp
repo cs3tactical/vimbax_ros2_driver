@@ -120,10 +120,9 @@ void SensorsSyncNode::right_frame_callback(const CameraFrame & frame)
   sync_and_publish_frames();
 }
 
-void SensorsSyncNode::sync_and_publish_frames()
+void SensorsSyncNode::trim_old_data()
 {
   auto now = this->now();
-
   auto trim_old = [&](auto & buffer, auto get_time, double threshold) {
     while (!buffer.empty() && (now - get_time(buffer.front())).seconds() > threshold) {
       buffer.pop_front();
@@ -139,30 +138,44 @@ void SensorsSyncNode::sync_and_publish_frames()
   trim_old(imu_buffer_, [](const ImuMsg::SharedPtr & msg) {
     return msg->header.stamp;
   }, imu_buffer_duration_);
+}
 
-  if (left_buffer_.empty() || right_buffer_.empty()) return;
+std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair()
+{
+  RCLCPP_INFO(this->get_logger(), "trying to find stereo pair");
 
-  CameraFrame *left = nullptr;
-  CameraFrame *right = nullptr;
+  while (!left_buffer_.empty() && !right_buffer_.empty()) {
+    CameraFrame & l = left_buffer_.front();
+    CameraFrame & r = right_buffer_.front();
 
-  // Iterate through left_buffer_ to find the earliest matching frame_id in right_buffer_
-  for (auto & l : left_buffer_) {
-    auto it = std::find_if(right_buffer_.begin(), right_buffer_.end(),
-                           [&](const CameraFrame & r) { return r.frame_id == l.frame_id; });
-    if (it != right_buffer_.end()) {
-      left = &l;
-      right = &(*it);
-      RCLCPP_INFO(this->get_logger(), "[SyncNode] Found matching stereo pair with frame_id: %lu", l.frame_id);
-      break;
+    if (l.frame_id == r.frame_id) {
+      return {&l, &r};
+    } else if (l.frame_id < r.frame_id) {
+      left_buffer_.pop_front();
+    } else {
+      right_buffer_.pop_front();
     }
   }
+  return {nullptr, nullptr};
+}
 
+void SensorsSyncNode::sync_and_publish_frames()
+{
+  // trim_old_data();
+  if (left_buffer_.empty() || right_buffer_.empty()) {
+    // RCLCPP_INFO(this->get_logger(), "cameras buffer empty");
+    return;
+  }
+
+  auto [left, right] = find_earliest_stereo_pair();
   if (!left || !right) {
     auto warn = std_msgs::msg::String();
     warn.data = "[SyncNode] No matching stereo pair found.";
     warning_pub_->publish(warn);
     return;
   }
+
+  RCLCPP_INFO(this->get_logger(), "[SyncNode] Found matching stereo pair with frame_id: %lu", left->frame_id);
 
   if (left->frame_id == 0 && !camera_time_initialized_) {
     camera_start_ts_left_ = left->internal_timestamp_ns;
@@ -214,7 +227,6 @@ void SensorsSyncNode::sync_and_publish_frames()
     [&](const CameraFrame & f) { return f.frame_id <= last_synced_frame_id_; }),
     right_buffer_.end());
 }
-
 
 }  // namespace vimbax_camera
 

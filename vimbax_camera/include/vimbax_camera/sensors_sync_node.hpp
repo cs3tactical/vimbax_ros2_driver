@@ -43,6 +43,10 @@ private:
   // Timestamp sync logic
   void sync_and_publish_frames();
 
+  // Helper methods
+  void trim_old_data();
+  std::pair<CameraFrame*, CameraFrame*> find_earliest_stereo_pair();
+
   // Camera interface
   std::unique_ptr<CameraInterface> left_camera_;
   std::unique_ptr<CameraInterface> right_camera_;
@@ -50,8 +54,7 @@ private:
   std::shared_ptr<camera_info_manager::CameraInfoManager> right_info_mgr_;
 
   size_t imu_msg_count_ = 0;
-  uint64_t expected_frame_id_ = 0;
-
+  
   // Params
   std::string left_camera_id_;
   std::string right_camera_id_;
@@ -74,7 +77,6 @@ private:
 
   // Frame ID tracking
   uint64_t last_synced_frame_id_ = 0;
-  rclcpp::Time last_imu_time_;
 
   // Time sync references
   bool camera_time_initialized_ = false;
