@@ -95,6 +95,24 @@ install(TARGETS
         DESTINATION lib/${PROJECT_NAME}
 )     
 
+# Add sensors_sync_node executable
+add_executable(sensors_sync_node src/sensors_sync_node.cpp)
+ament_target_dependencies(sensors_sync_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+  image_transport
+  camera_info_manager
+  vimbax_camera_msgs
+)
+
+target_link_libraries(sensors_sync_node ${PROJECT_NAME})
+install(TARGETS
+  sensors_sync_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
 # Install launch files.
 install(DIRECTORY
   launch
