@@ -33,10 +33,11 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 "imu_topic": "/imu/data",
-                "pwm_frequency": 105,
-                "pwm_divider": 7,
+                "pwm_frequency": 100,
+                "pwm_divider": 5,
                 "pwm_duty_cycle": 50,
                 "buffer_count": 15,
+                "sync_first_sample_only": True,
                 "left_camera_id": left_name,
                 "right_camera_id": right_name,
                 "left_camera_info_url": f"file://{left_yaml}",
