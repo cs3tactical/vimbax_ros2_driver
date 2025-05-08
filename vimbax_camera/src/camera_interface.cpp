@@ -105,6 +105,9 @@ bool CameraInterface::initialize(FrameCallback callback)
       info.width = image.width;
       info.height = image.height;
 
+      // ----- metadata -------
+      populate_metadata(camera_frame.metadata);
+
       // ---- Callback ----
       if (frame_callback_) {
         frame_callback_(camera_frame);
@@ -131,5 +134,24 @@ bool CameraInterface::is_ready() const
 {
   return ready_;
 }
+
+void CameraInterface::populate_metadata(CameraMetadata & meta)
+{
+  // Exposure settings
+  auto exposure_time = camera_->feature_float_get("ExposureTime");
+  meta.exposure_time_us = exposure_time ? *exposure_time : 0.0;
+
+  // Device temperature
+  auto device_temp = camera_->feature_float_get("DeviceTemperature");
+  meta.device_temp_c = device_temp ? *device_temp : 0.0;
+
+  auto temp_status = camera_->feature_enum_get("DeviceTemperatureStatus");
+  meta.temp_status = temp_status ? *temp_status : "UNKNOWN";
+
+  // Gain settings
+  auto gain = camera_->feature_float_get("Gain");
+  meta.gain_db = gain ? *gain : 0.0;
+}
+
 
 }  // namespace vimbax_camera_sync

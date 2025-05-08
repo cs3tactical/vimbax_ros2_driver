@@ -5,12 +5,14 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <sensor_msgs/msg/temperature.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
 
 #include <deque>
 #include <memory>
 #include <mutex>
 
+#include "vimbax_camera_msgs/msg/camera_metadata.hpp"
 #include "vimbax_camera/camera_interface.hpp"
 
 namespace vimbax_camera
@@ -51,6 +53,8 @@ private:
   // Helper methods
   void trim_old_data();
   std::pair<CameraFrame*, CameraFrame*> find_earliest_stereo_pair();
+  vimbax_camera_msgs::msg::CameraMetadata build_metadata_msg_body(
+    const vimbax_camera_sync::CameraMetadata & meta);  
 
   // Camera interface
   std::unique_ptr<CameraInterface> left_camera_;
@@ -100,7 +104,13 @@ private:
   rclcpp::Publisher<ImageMsg>::SharedPtr right_pub_;
   rclcpp::Publisher<CameraInfoMsg>::SharedPtr left_info_pub_;
   rclcpp::Publisher<CameraInfoMsg>::SharedPtr right_info_pub_;
+  rclcpp::Publisher<vimbax_camera_msgs::msg::CameraMetadata>::SharedPtr left_metadata_pub_;
+  rclcpp::Publisher<vimbax_camera_msgs::msg::CameraMetadata>::SharedPtr right_metadata_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr left_temp_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr right_temp_pub_;
+  
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr warning_pub_;
+  
   rclcpp::Subscription<ImuMsg>::SharedPtr imu_sub_;
 };
 

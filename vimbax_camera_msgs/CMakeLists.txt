@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 set(vimbax_camera_MSGS
     msg/FeatureFlags.msg
@@ -19,6 +20,7 @@ set(vimbax_camera_MSGS
     msg/FeatureModule.msg
     msg/TriggerInfo.msg
     msg/StereoSyncStatus.msg
+    msg/CameraMetadata.msg
 )
 
 set(vimbax_camera_SRVS
@@ -58,7 +60,7 @@ set(vimbax_camera_SRVS
 rosidl_generate_interfaces(${PROJECT_NAME}
     ${vimbax_camera_MSGS}
     ${vimbax_camera_SRVS}
-    DEPENDENCIES builtin_interfaces
+    DEPENDENCIES builtin_interfaces std_msgs
 )
 
 if(BUILD_TESTING)

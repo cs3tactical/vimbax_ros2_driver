@@ -14,12 +14,23 @@
 namespace vimbax_camera_sync
 {
 
+struct CameraMetadata
+{
+  double exposure_time_us = 0.0;
+
+  double device_temp_c = 0.0;
+  std::string temp_status;
+  
+  double gain_db = 0.0;
+};
+
 struct CameraFrame
 {
   sensor_msgs::msg::Image image;
   sensor_msgs::msg::CameraInfo info;
   uint64_t frame_id = 0;                 // From Vimba: frame->get_frame_id()
   uint64_t internal_timestamp_ns = 0;   // From Vimba: frame->get_timestamp_ns()
+  CameraMetadata metadata;
 };
 
 class CameraInterface
@@ -41,6 +52,8 @@ private:
 
   std::shared_ptr<vimbax_camera::VmbCAPI> api_;
   std::shared_ptr<vimbax_camera::VimbaXCamera> camera_;
+
+  void populate_metadata(CameraMetadata & meta);
 };
 
 }  // namespace vimbax_camera_sync

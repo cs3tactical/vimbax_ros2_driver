@@ -36,6 +36,11 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   right_pub_ = this->create_publisher<ImageMsg>("camera_right/image_raw", 10);
   left_info_pub_ = this->create_publisher<CameraInfoMsg>("camera_left/camera_info", 10);
   right_info_pub_ = this->create_publisher<CameraInfoMsg>("camera_right/camera_info", 10);
+  left_metadata_pub_ = this->create_publisher<vimbax_camera_msgs::msg::CameraMetadata>("camera_left/metadata", 10);
+  right_metadata_pub_ = this->create_publisher<vimbax_camera_msgs::msg::CameraMetadata>("camera_right/metadata", 10);
+  left_temp_pub_ = this->create_publisher<sensor_msgs::msg::Temperature>("camera_left/temperature", 10);
+  right_temp_pub_ = this->create_publisher<sensor_msgs::msg::Temperature>("camera_right/temperature", 10);
+  
   warning_pub_ = this->create_publisher<std_msgs::msg::String>(warning_topic_, 10);
 }
 
@@ -299,6 +304,39 @@ void SensorsSyncNode::sync_and_publish_frames()
   left_info_pub_->publish(left_info);
   right_info_pub_->publish(right_info);
 
+  vimbax_camera_msgs::msg::CameraMetadata left_metadata = build_metadata_msg_body(left->metadata);
+  left_metadata.header.stamp = final_stamp;
+  left_metadata.header.frame_id = left_camera_link_;
+  left_metadata.frame_index = left->frame_id;
+  left_metadata.internal_timestamp = rclcpp::Time(left->internal_timestamp_ns);
+  
+  vimbax_camera_msgs::msg::CameraMetadata right_metadata = build_metadata_msg_body(right->metadata);
+  right_metadata.header.stamp = final_stamp;
+  right_metadata.header.frame_id = right_camera_link_;
+  right_metadata.frame_index = right->frame_id;
+  right_metadata.internal_timestamp = rclcpp::Time(right->internal_timestamp_ns);  
+
+  left_metadata_pub_->publish(left_metadata);
+  right_metadata_pub_->publish(right_metadata);
+
+  if (left->frame_id % 10 == 0) {
+    // Publish left camera temperature
+    sensor_msgs::msg::Temperature left_temp_msg;
+    left_temp_msg.header.stamp = final_stamp;
+    left_temp_msg.header.frame_id = left_camera_link_;
+    left_temp_msg.temperature = left->metadata.device_temp_c;
+    left_temp_msg.variance = 0.0;
+    left_temp_pub_->publish(left_temp_msg);
+  
+    // Publish right camera temperature
+    sensor_msgs::msg::Temperature right_temp_msg;
+    right_temp_msg.header.stamp = final_stamp;
+    right_temp_msg.header.frame_id = right_camera_link_;
+    right_temp_msg.temperature = right->metadata.device_temp_c;
+    right_temp_msg.variance = 0.0;
+    right_temp_pub_->publish(right_temp_msg);
+  }
+
   last_synced_frame_id_ = left->frame_id;
 
   left_buffer_.erase(std::remove_if(left_buffer_.begin(), left_buffer_.end(),
@@ -308,6 +346,21 @@ void SensorsSyncNode::sync_and_publish_frames()
   right_buffer_.erase(std::remove_if(right_buffer_.begin(), right_buffer_.end(),
     [&](const CameraFrame & f) { return f.frame_id <= last_synced_frame_id_; }),
     right_buffer_.end());
+}
+
+vimbax_camera_msgs::msg::CameraMetadata SensorsSyncNode::build_metadata_msg_body(
+  const vimbax_camera_sync::CameraMetadata & meta)
+{
+  vimbax_camera_msgs::msg::CameraMetadata msg;
+
+  msg.exposure_time_us = meta.exposure_time_us;
+
+  msg.device_temp_c = meta.device_temp_c;
+  msg.temp_status = meta.temp_status;
+
+  msg.gain_db = meta.gain_db;
+
+  return msg;
 }
 
 }  // namespace vimbax_camera
