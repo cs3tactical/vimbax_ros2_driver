@@ -9,11 +9,14 @@ using CameraFrame = vimbax_camera_sync::CameraFrame;
 SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
 : Node("sensors_sync_node", options)
 {
+  imu_topic_ = this->declare_parameter<std::string>("imu_topic", "/imu/data");
   left_camera_id_ = this->declare_parameter<std::string>("left_camera_id");
   right_camera_id_ = this->declare_parameter<std::string>("right_camera_id");
-  imu_topic_ = this->declare_parameter<std::string>("imu_topic", "/imu/data");
+  left_camera_link_ = this->declare_parameter<std::string>("left_camera_link", "camera_left");
+  right_camera_link_ = this->declare_parameter<std::string>("right_camera_link", "camera_right");
   left_camera_info_url_ = this->declare_parameter<std::string>("left_camera_info_url");
   right_camera_info_url_ = this->declare_parameter<std::string>("right_camera_info_url");
+
   pwm_freq_ = this->declare_parameter<int>("pwm_frequency", 105);
   pwm_divider_ = this->declare_parameter<int>("pwm_divider", 7);
   pwm_duty_ = this->declare_parameter<int>("pwm_duty", 50);
@@ -280,12 +283,16 @@ void SensorsSyncNode::sync_and_publish_frames()
   }
 
   left->image.header.stamp = final_stamp;
+  left->image.header.frame_id = left_camera_link_;
   right->image.header.stamp = final_stamp;
+  right->image.header.frame_id = right_camera_link_;
 
   auto left_info = left_info_mgr_->getCameraInfo();
   auto right_info = right_info_mgr_->getCameraInfo();
   left_info.header.stamp = final_stamp;
+  left_info.header.frame_id = left_camera_link_;
   right_info.header.stamp = final_stamp;
+  right_info.header.frame_id = right_camera_link_;
 
   left_pub_->publish(left->image);
   right_pub_->publish(right->image);

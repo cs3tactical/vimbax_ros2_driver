@@ -59,9 +59,11 @@ private:
   std::shared_ptr<camera_info_manager::CameraInfoManager> right_info_mgr_;
   
   // Params
+  std::string imu_topic_;
   std::string left_camera_id_;
   std::string right_camera_id_;
-  std::string imu_topic_;
+  std::string left_camera_link_;
+  std::string right_camera_link_;
   std::string left_camera_info_url_;
   std::string right_camera_info_url_;
   int pwm_freq_;
