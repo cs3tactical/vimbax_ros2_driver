@@ -89,6 +89,8 @@ private:
 
   // Frame ID tracking
   uint64_t last_synced_frame_id_ = 0;
+  uint64_t last_left_frame_id_ = 0;
+  uint64_t last_right_frame_id_ = 0;
   
   size_t imu_index_ = 0;
 

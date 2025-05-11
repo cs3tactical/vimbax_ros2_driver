@@ -48,6 +48,7 @@ private:
   rclcpp::Node * node_;
   std::string camera_id_;
   bool ready_ = false;
+  uint64_t last_frame_id_ = 0;
   FrameCallback frame_callback_;
 
   std::shared_ptr<vimbax_camera::VmbCAPI> api_;

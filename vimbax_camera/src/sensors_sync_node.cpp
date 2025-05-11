@@ -47,6 +47,7 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
 bool SensorsSyncNode::initialize()
 {
   // Safely initialize VimbaX API once on main thread
+  RCLCPP_INFO(this->get_logger(), "Loading Vimbax API ...");
   auto api = vimbax_camera::VmbCAPI::get_instance();
   if (!api) {
     RCLCPP_FATAL(this->get_logger(), "Failed to load VimbaX API (VmbStartup failed).");
@@ -62,6 +63,7 @@ bool SensorsSyncNode::initialize()
   std::string err_msg;
 
   std::thread right_thread([&] {
+    RCLCPP_INFO(this->get_logger(), "Loading right camera ...");
     right_camera_ = std::make_unique<CameraInterface>(this, right_camera_id_);
     if (right_camera_->initialize([this](const CameraFrame & f) { this->right_frame_callback(f); })) {
       right_ok = true;
@@ -72,6 +74,7 @@ bool SensorsSyncNode::initialize()
   });
 
   std::thread left_thread([&] {
+    RCLCPP_INFO(this->get_logger(), "Loading left camera ...");
     left_camera_ = std::make_unique<CameraInterface>(this, left_camera_id_);
     if (left_camera_->initialize([this](const CameraFrame & f) { this->left_frame_callback(f); })) {
       left_ok = true;
@@ -162,6 +165,17 @@ void SensorsSyncNode::left_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   left_buffer_.push_back(frame);
+
+  auto diff = frame.frame_id - last_left_frame_id_;
+  if (diff > 1) {
+    std_msgs::msg::String msg;
+    msg.data = "[LEFT] " + std::to_string(diff - 1) + 
+               " frames dropped - didn\'t received from camera (last: " + std::to_string(last_left_frame_id_) +
+               ", current: " + std::to_string(frame.frame_id) + ")";
+    warning_pub_->publish(msg);
+  }
+  last_left_frame_id_ = frame.frame_id;
+
   if (print_frames_data_)
   {
     RCLCPP_INFO(this->get_logger(),
@@ -177,6 +191,17 @@ void SensorsSyncNode::right_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   right_buffer_.push_back(frame);
+
+  auto diff = frame.frame_id - last_right_frame_id_;
+  if (diff > 1) {
+    std_msgs::msg::String msg;
+    msg.data = "[RIGHT] " + std::to_string(diff - 1) + 
+               " frames dropped - didn\'t received from camera (last: " + std::to_string(last_right_frame_id_) +
+               ", current: " + std::to_string(frame.frame_id) + ")";
+    warning_pub_->publish(msg);
+  }
+  last_right_frame_id_ = frame.frame_id;
+
   if (print_frames_data_)
   {
     RCLCPP_INFO(this->get_logger(),
@@ -209,7 +234,6 @@ void SensorsSyncNode::trim_old_data()
 
 std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair()
 {
-
   while (!left_buffer_.empty() && !right_buffer_.empty()) {
     CameraFrame & l = left_buffer_.front();
     CameraFrame & r = right_buffer_.front();
@@ -272,7 +296,7 @@ void SensorsSyncNode::sync_and_publish_frames()
   auto [left, right] = find_earliest_stereo_pair();
   if (!left || !right) {
     auto warn = std_msgs::msg::String();
-    warn.data = "No matching stereo pair found.";
+    warn.data = "[sync_and_publish_frames] No matching stereo pair found.";
     warning_pub_->publish(warn);
     return;
   }

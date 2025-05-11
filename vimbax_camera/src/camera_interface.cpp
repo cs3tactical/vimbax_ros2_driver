@@ -81,6 +81,16 @@ bool CameraInterface::initialize(FrameCallback callback)
       camera_frame.frame_id = frame->get_frame_id();
       camera_frame.internal_timestamp_ns = frame->get_timestamp_ns();
 
+      if (last_frame_id_) {
+        auto diff = camera_frame.frame_id - last_frame_id_;
+        if (diff > 1) {
+          RCLCPP_WARN(node_->get_logger(),
+            "[CameraInterface][%s] %lu frame(s) dropped! (last: %lu, current: %lu)",
+            camera_id_.c_str(), diff - 1, last_frame_id_, camera_frame.frame_id);
+        }
+      }
+      last_frame_id_ = camera_frame.frame_id;
+
       sensor_msgs::msg::Image & image = camera_frame.image;
       sensor_msgs::msg::CameraInfo & info = camera_frame.info;
 
