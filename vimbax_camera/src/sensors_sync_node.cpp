@@ -28,9 +28,9 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   print_stereo_pair_data_ = this->declare_parameter<bool>("print_stereo_pair_data", false);
 
   left_info_mgr_ = std::make_shared<camera_info_manager::CameraInfoManager>(
-    this, left_camera_id_, left_camera_info_url_);
+    this, left_camera_link_, left_camera_info_url_);
   right_info_mgr_ = std::make_shared<camera_info_manager::CameraInfoManager>(
-    this, right_camera_id_, right_camera_info_url_);
+    this, right_camera_link_, right_camera_info_url_);
 
   left_pub_ = this->create_publisher<ImageMsg>("camera_left/image_raw", 10);
   right_pub_ = this->create_publisher<ImageMsg>("camera_right/image_raw", 10);
@@ -46,20 +46,46 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
 
 bool SensorsSyncNode::initialize()
 {
-  right_camera_ = std::make_unique<CameraInterface>(this, right_camera_id_);
-  left_camera_ = std::make_unique<CameraInterface>(this, left_camera_id_);
+  // Safely initialize VimbaX API once on main thread
+  auto api = vimbax_camera::VmbCAPI::get_instance();
+  if (!api) {
+    RCLCPP_FATAL(this->get_logger(), "Failed to load VimbaX API (VmbStartup failed).");
+    return false;
+  }
+  RCLCPP_INFO(this->get_logger(), "Vimbax API loaded");
 
   disable_pwm();
 
-  if (!right_camera_->initialize(
-      [this](const CameraFrame & f) { this->right_frame_callback(f); })) {
-  RCLCPP_FATAL(this->get_logger(), "Failed to initialize right camera");
-  return false;
-  }
+  // Parallel camera initialization
+  std::atomic<bool> right_ok{false}, left_ok{false};
+  std::mutex err_mutex;
+  std::string err_msg;
 
-  if (!left_camera_->initialize(
-          [this](const CameraFrame & f) { this->left_frame_callback(f); })) {
-    RCLCPP_FATAL(this->get_logger(), "Failed to initialize left camera");
+  std::thread right_thread([&] {
+    right_camera_ = std::make_unique<CameraInterface>(this, right_camera_id_);
+    if (right_camera_->initialize([this](const CameraFrame & f) { this->right_frame_callback(f); })) {
+      right_ok = true;
+    } else {
+      std::lock_guard<std::mutex> lock(err_mutex);
+      err_msg += "Right camera failed to initialize.\n";
+    }
+  });
+
+  std::thread left_thread([&] {
+    left_camera_ = std::make_unique<CameraInterface>(this, left_camera_id_);
+    if (left_camera_->initialize([this](const CameraFrame & f) { this->left_frame_callback(f); })) {
+      left_ok = true;
+    } else {
+      std::lock_guard<std::mutex> lock(err_mutex);
+      err_msg += "Left camera failed to initialize.\n";
+    }
+  });
+
+  right_thread.join();
+  left_thread.join();
+
+  if (!right_ok || !left_ok) {
+    RCLCPP_FATAL(this->get_logger(), "Camera initialization failed:\n%s", err_msg.c_str());
     return false;
   }
 
@@ -71,12 +97,10 @@ bool SensorsSyncNode::initialize()
 
   RCLCPP_INFO(this->get_logger(), "subscribed to imu topic");
 
-  // Small delay to ensure both cameras are ready before triggering PWM
-  // rclcpp::sleep_for(std::chrono::milliseconds(10000));
-
   trigger_pwm();
   return true;
 }
+
 
 SensorsSyncNode::~SensorsSyncNode()
 {
