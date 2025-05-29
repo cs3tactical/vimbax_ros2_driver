@@ -112,7 +112,7 @@ SensorsSyncNode::~SensorsSyncNode()
 
 void SensorsSyncNode::trigger_pwm()
 {
-  std::string command = "sudo /usr/local/bin/pwm_control.sh 0 " +
+  std::string command = "/usr/local/bin/pwm_control.sh 0 " +
                         std::to_string(pwm_freq_) + " " + std::to_string(pwm_duty_);
   int ret = std::system(command.c_str());
   if (ret == 0) {
@@ -124,7 +124,7 @@ void SensorsSyncNode::trigger_pwm()
 
 void SensorsSyncNode::disable_pwm()
 {
-  std::string command = "sudo /usr/local/bin/pwm_control.sh 0 disable";
+  std::string command = "/usr/local/bin/pwm_control.sh 0 disable";
   int ret = std::system(command.c_str());
   if (ret == 0) {
     RCLCPP_INFO(this->get_logger(), "PWM signal disabled.");
