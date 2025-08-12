@@ -164,7 +164,10 @@ void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
 void SensorsSyncNode::left_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
-  left_buffer_.push_back(frame);
+
+  if (frame.frame_id) {  // Ignore frame ID #0 - the camera sends it before trigger
+    left_buffer_.push_back(frame);
+  }
 
   auto diff = frame.frame_id - last_left_frame_id_;
   if (diff > 1) {
@@ -190,7 +193,10 @@ void SensorsSyncNode::left_frame_callback(const CameraFrame & frame)
 void SensorsSyncNode::right_frame_callback(const CameraFrame & frame)
 {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
-  right_buffer_.push_back(frame);
+
+  if (frame.frame_id) {  // Ignore frame ID #0 - the camera sends it before trigger
+    right_buffer_.push_back(frame);
+  }
 
   auto diff = frame.frame_id - last_right_frame_id_;
   if (diff > 1) {
@@ -301,7 +307,8 @@ void SensorsSyncNode::sync_and_publish_frames()
     return;
   }
 
-  if (left->frame_id == 0 && !camera_time_initialized_) {
+  // Start timestamp sync from frame ID #1, not 0:
+  if (left->frame_id == 1 && !camera_time_initialized_) {
     camera_start_ts_left_ = left->internal_timestamp_ns;
     camera_start_ts_right_ = right->internal_timestamp_ns;
     camera_time_initialized_ = true;
