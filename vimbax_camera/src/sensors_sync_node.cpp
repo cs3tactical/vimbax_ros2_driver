@@ -17,7 +17,7 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   left_camera_info_url_ = this->declare_parameter<std::string>("left_camera_info_url");
   right_camera_info_url_ = this->declare_parameter<std::string>("right_camera_info_url");
 
-  pwm_freq_ = this->declare_parameter<int>("pwm_frequency", 105);
+  pwm_freq_ = this->declare_parameter<int>("pwm_frequency", 100);
   pwm_divider_ = this->declare_parameter<int>("pwm_divider", 7);
   pwm_duty_ = this->declare_parameter<int>("pwm_duty", 50);
   sync_first_sample_only_ = this->declare_parameter<bool>("sync_first_sample_only", true);
@@ -141,7 +141,18 @@ void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
   {
     imu_start_time_ = msg->header.stamp;
     imu_first_call_ = false;
+
     RCLCPP_INFO(this->get_logger(), "IMU first sample time: %.9f", imu_start_time_.seconds());
+
+    // Compute offset: pwm_divider_ * (1 / pwm_freq_) seconds
+    double offset_sec = static_cast<double>(pwm_divider_ - 1) / static_cast<double>(pwm_freq_);
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Adding delta offset: %.9f sec",
+      offset_sec
+    );
+
+    imu_start_time_ = imu_start_time_ + rclcpp::Duration::from_seconds(offset_sec);
   }
 
   imu_buffer_.emplace_back(imu_index_, msg);
