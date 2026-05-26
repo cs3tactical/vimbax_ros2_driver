@@ -9,7 +9,7 @@ using CameraFrame = vimbax_camera_sync::CameraFrame;
 SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
 : Node("sensors_sync_node", options)
 {
-  imu_topic_ = this->declare_parameter<std::string>("imu_topic", "/imu/data");
+  // imu_topic_ = this->declare_parameter<std::string>("imu_topic", "/imu/data");
   left_camera_id_ = this->declare_parameter<std::string>("left_camera_id");
   right_camera_id_ = this->declare_parameter<std::string>("right_camera_id");
   left_camera_link_ = this->declare_parameter<std::string>("left_camera_link", "camera_left");
@@ -20,10 +20,10 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   pwm_freq_ = this->declare_parameter<int>("pwm_frequency", 100);
   pwm_divider_ = this->declare_parameter<int>("pwm_divider", 7);
   pwm_duty_ = this->declare_parameter<int>("pwm_duty", 50);
-  sync_first_sample_only_ = this->declare_parameter<bool>("sync_first_sample_only", true);
+  // sync_first_sample_only_ = this->declare_parameter<bool>("sync_first_sample_only", true);
   warning_topic_ = this->declare_parameter<std::string>("warning_topic", "/diagnostics/stereo_warnings");
   camera_buffer_duration_ = this->declare_parameter<double>("camera_buffer_duration", 3.0);
-  imu_buffer_duration_ = this->declare_parameter<double>("imu_buffer_duration", 3.0);
+  // imu_buffer_duration_ = this->declare_parameter<double>("imu_buffer_duration", 3.0);
   print_frames_data_ = this->declare_parameter<bool>("print_frames_data", false);
   print_stereo_pair_data_ = this->declare_parameter<bool>("print_stereo_pair_data", false);
 
@@ -94,11 +94,13 @@ bool SensorsSyncNode::initialize()
 
   RCLCPP_INFO(this->get_logger(), "initialized cameras successfully");
 
-  imu_sub_ = this->create_subscription<ImuMsg>(
-    imu_topic_, 100,
-    std::bind(&SensorsSyncNode::imu_callback, this, std::placeholders::_1));
-
-  RCLCPP_INFO(this->get_logger(), "subscribed to imu topic");
+  // IMU subscription disabled - timestamps are anchored from first camera frame only
+  // if (!sync_first_sample_only_) {
+  //   imu_sub_ = this->create_subscription<ImuMsg>(
+  //     imu_topic_, 100,
+  //     std::bind(&SensorsSyncNode::imu_callback, this, std::placeholders::_1));
+  //   RCLCPP_INFO(this->get_logger(), "subscribed to IMU topic for buffer-based stamp refinement");
+  // }
 
   trigger_pwm();
   return true;
@@ -133,44 +135,16 @@ void SensorsSyncNode::disable_pwm()
   }
 }
 
-void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
-{
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-  if (imu_first_call_)  // Save first imu time:
-  {
-    imu_start_time_ = msg->header.stamp;
-    imu_first_call_ = false;
-
-    RCLCPP_INFO(this->get_logger(), "IMU first sample time: %.9f", imu_start_time_.seconds());
-
-    // Compute offset: pwm_divider_ * (1 / pwm_freq_) seconds
-    double offset_sec = static_cast<double>(pwm_divider_ - 1) / static_cast<double>(pwm_freq_);
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Adding delta offset: %.9f sec",
-      offset_sec
-    );
-
-    imu_start_time_ = imu_start_time_ + rclcpp::Duration::from_seconds(offset_sec);
-  }
-
-  imu_buffer_.emplace_back(imu_index_, msg);
-  RCLCPP_INFO(this->get_logger(),
-    "Received IMU message [%zu] - timestamp: %.9f",
-    imu_index_,
-    msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9);
-  imu_index_++;
-
-  // If sync_first_sample_only_ - use only first IMU sample:
-  if (sync_first_sample_only_) {
-    // Unsubscribe from IMU topic after getting the first message
-    imu_sub_.reset();
-    imu_buffer_.clear();
-    RCLCPP_INFO(this->get_logger(), "Unsubscribed from IMU topic after first message.");
-  }
-  // sync_and_publish_frames();
-}
+// void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
+// {
+//   std::lock_guard<std::mutex> lock(buffer_mutex_);
+//   imu_buffer_.emplace_back(imu_index_, msg);
+//   RCLCPP_INFO(this->get_logger(),
+//     "Received IMU message [%zu] - timestamp: %.9f",
+//     imu_index_,
+//     msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9);
+//   imu_index_++;
+// }
 
 void SensorsSyncNode::left_frame_callback(const CameraFrame & frame)
 {
@@ -244,9 +218,9 @@ void SensorsSyncNode::trim_old_data()
   trim_old(right_buffer_, [](const CameraFrame & f) {
     return rclcpp::Time(f.image.header.stamp);
   }, camera_buffer_duration_);
-  trim_old(imu_buffer_, [](const std::pair<uint64_t, ImuMsg::SharedPtr> & pair) {
-    return pair.second->header.stamp;
-  }, imu_buffer_duration_);  
+  // trim_old(imu_buffer_, [](const std::pair<uint64_t, ImuMsg::SharedPtr> & pair) {
+  //   return pair.second->header.stamp;
+  // }, imu_buffer_duration_);
 }
 
 std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair()
@@ -266,47 +240,40 @@ std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair
   return {nullptr, nullptr};
 }
 
-rclcpp::Time SensorsSyncNode::predict_stamp_using_imu_buffer(
-  uint64_t frame_id,
-  uint64_t dt_left,
-  uint64_t dt_right)
-{
-  uint64_t avg_offset_ns = (dt_left + dt_right) / 2;
-  rclcpp::Time predicted_stamp = imu_start_time_ + rclcpp::Duration::from_nanoseconds(avg_offset_ns);
-
-  size_t expected_imu_index = frame_id * pwm_divider_;
-  rclcpp::Time best_imu_stamp = predicted_stamp;
-  rclcpp::Duration min_diff = rclcpp::Duration::from_seconds(0.1);
-  
-  for (const auto & [idx, imu] : imu_buffer_) {
-    if (idx < expected_imu_index) continue;
-  
-    rclcpp::Time imu_time = imu->header.stamp;
-    auto diff = std::abs((imu_time - predicted_stamp).nanoseconds());
-    if (diff < min_diff.nanoseconds()) {
-      best_imu_stamp = imu_time;
-      min_diff = rclcpp::Duration::from_nanoseconds(diff);
-    }
-  }
-
-  if (min_diff.nanoseconds() < 2000000) {  // within 2ms
-    return best_imu_stamp;
-  } else {
-    return predicted_stamp;
-  }
-}
+// rclcpp::Time SensorsSyncNode::predict_stamp_using_imu_buffer(
+//   uint64_t frame_id,
+//   uint64_t dt_left,
+//   uint64_t dt_right)
+// {
+//   uint64_t avg_offset_ns = (dt_left + dt_right) / 2;
+//   rclcpp::Time predicted_stamp = camera_start_ros_time_ + rclcpp::Duration::from_nanoseconds(avg_offset_ns);
+//
+//   size_t expected_imu_index = frame_id * pwm_divider_;
+//   rclcpp::Time best_imu_stamp = predicted_stamp;
+//   rclcpp::Duration min_diff = rclcpp::Duration::from_seconds(0.1);
+//
+//   for (const auto & [idx, imu] : imu_buffer_) {
+//     if (idx < expected_imu_index) continue;
+//     rclcpp::Time imu_time = imu->header.stamp;
+//     auto diff = std::abs((imu_time - predicted_stamp).nanoseconds());
+//     if (diff < min_diff.nanoseconds()) {
+//       best_imu_stamp = imu_time;
+//       min_diff = rclcpp::Duration::from_nanoseconds(diff);
+//     }
+//   }
+//
+//   if (min_diff.nanoseconds() < 2000000) {  // within 2ms
+//     return best_imu_stamp;
+//   } else {
+//     return predicted_stamp;
+//   }
+// }
 
 
 void SensorsSyncNode::sync_and_publish_frames()
 {
   // trim_old_data();
   if (left_buffer_.empty() || right_buffer_.empty()) {
-    return;
-  }
-
-  if (imu_start_time_.nanoseconds() == 0) {
-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-      "IMU start time not set yet. Waiting for first IMU message.");
     return;
   }
 
@@ -322,7 +289,18 @@ void SensorsSyncNode::sync_and_publish_frames()
   if (left->frame_id == 1 && !camera_time_initialized_) {
     camera_start_ts_left_ = left->internal_timestamp_ns;
     camera_start_ts_right_ = right->internal_timestamp_ns;
+    camera_start_ros_time_ = this->now();
     camera_time_initialized_ = true;
+
+    RCLCPP_INFO(this->get_logger(),
+      "Camera start time anchored from first stereo pair (frame #1): %.9f",
+      camera_start_ros_time_.seconds());
+  }
+
+  if (!camera_time_initialized_) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+      "Camera start time not set yet. Waiting for first stereo pair.");
+    return;
   }
 
   // if (!camera_time_initialized_) return;
@@ -330,16 +308,11 @@ void SensorsSyncNode::sync_and_publish_frames()
   uint64_t dt_left = left->internal_timestamp_ns - camera_start_ts_left_;
   uint64_t dt_right = right->internal_timestamp_ns - camera_start_ts_right_;
 
-  rclcpp::Time final_stamp;
+  uint64_t avg_offset_ns = (dt_left + dt_right) / 2;
+  rclcpp::Time final_stamp = camera_start_ros_time_ + rclcpp::Duration::from_nanoseconds(avg_offset_ns);
 
-  if (sync_first_sample_only_) {
-    // Predict timestamp from first IMU sample and internal time deltas
-    uint64_t avg_offset_ns = (dt_left + dt_right) / 2;
-    final_stamp = imu_start_time_ + rclcpp::Duration::from_nanoseconds(avg_offset_ns);
-  } else {
-    // Predict timestamp based on IMU buffer search
-    final_stamp = predict_stamp_using_imu_buffer(left->frame_id, dt_left, dt_right);
-  }  
+  // IMU-based stamp refinement disabled:
+  // final_stamp = predict_stamp_using_imu_buffer(left->frame_id, dt_left, dt_right);
 
   if (print_stereo_pair_data_)
   {

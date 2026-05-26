@@ -2,7 +2,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/imu.hpp>
+// #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <sensor_msgs/msg/temperature.hpp>
@@ -29,12 +29,12 @@ public:
 private:
   using ImageMsg = sensor_msgs::msg::Image;
   using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
-  using ImuMsg = sensor_msgs::msg::Imu;
+  // using ImuMsg = sensor_msgs::msg::Imu;
   using CameraInterface = vimbax_camera_sync::CameraInterface;
   using CameraFrame = vimbax_camera_sync::CameraFrame;
 
   // Callbacks
-  void imu_callback(const ImuMsg::SharedPtr msg);
+  // void imu_callback(const ImuMsg::SharedPtr msg);
   void left_frame_callback(const CameraFrame & frame);
   void right_frame_callback(const CameraFrame & frame);
 
@@ -42,10 +42,10 @@ private:
   void trigger_pwm();
   void disable_pwm();
 
-  rclcpp::Time predict_stamp_using_imu_buffer(
-    uint64_t frame_id,
-    uint64_t dt_left,
-    uint64_t dt_right);
+  // rclcpp::Time predict_stamp_using_imu_buffer(
+  //   uint64_t frame_id,
+  //   uint64_t dt_left,
+  //   uint64_t dt_right);
 
   // Timestamp sync logic
   void sync_and_publish_frames();
@@ -63,7 +63,7 @@ private:
   std::shared_ptr<camera_info_manager::CameraInfoManager> right_info_mgr_;
   
   // Params
-  std::string imu_topic_;
+  // std::string imu_topic_;
   std::string left_camera_id_;
   std::string right_camera_id_;
   std::string left_camera_link_;
@@ -74,17 +74,17 @@ private:
   int pwm_divider_;
   int pwm_duty_;
   int buffer_count_;
-  bool sync_first_sample_only_ = true;
+  // bool sync_first_sample_only_ = true;
   std::string warning_topic_;
   double camera_buffer_duration_;
-  double imu_buffer_duration_;  
+  // double imu_buffer_duration_;
   bool print_frames_data_ = false;
   bool print_stereo_pair_data_ = false;
 
   // Buffers
   std::deque<CameraFrame> left_buffer_;
   std::deque<CameraFrame> right_buffer_;
-  std::deque<std::pair<size_t, ImuMsg::SharedPtr>> imu_buffer_;
+  // std::deque<std::pair<size_t, ImuMsg::SharedPtr>> imu_buffer_;
   std::mutex buffer_mutex_;
 
   // Frame ID tracking
@@ -92,14 +92,13 @@ private:
   uint64_t last_left_frame_id_ = 0;
   uint64_t last_right_frame_id_ = 0;
   
-  size_t imu_index_ = 0;
+  // size_t imu_index_ = 0;
 
   // Time sync references
   bool camera_time_initialized_ = false;
   uint64_t camera_start_ts_left_ = 0;
   uint64_t camera_start_ts_right_ = 0;
-  rclcpp::Time imu_start_time_;  
-  bool imu_first_call_ = true;
+  rclcpp::Time camera_start_ros_time_;
 
   // Publishers
   rclcpp::Publisher<ImageMsg>::SharedPtr left_pub_;
@@ -112,8 +111,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr right_temp_pub_;
   
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr warning_pub_;
-  
-  rclcpp::Subscription<ImuMsg>::SharedPtr imu_sub_;
+
+  // rclcpp::Subscription<ImuMsg>::SharedPtr imu_sub_;
 };
 
 }  // namespace vimbax_camera
