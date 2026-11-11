@@ -25,6 +25,7 @@ public:
   ~SensorsSyncNode();
 
   bool initialize();
+  void shutdown();
 
 private:
   using ImageMsg = sensor_msgs::msg::Image;
@@ -56,9 +57,7 @@ private:
   vimbax_camera_msgs::msg::CameraMetadata build_metadata_msg_body(
     const vimbax_camera_sync::CameraMetadata & meta);  
 
-  // Camera interface
-  std::unique_ptr<CameraInterface> left_camera_;
-  std::unique_ptr<CameraInterface> right_camera_;
+  // Camera info
   std::shared_ptr<camera_info_manager::CameraInfoManager> left_info_mgr_;
   std::shared_ptr<camera_info_manager::CameraInfoManager> right_info_mgr_;
   
@@ -113,6 +112,11 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr warning_pub_;
 
   // rclcpp::Subscription<ImuMsg>::SharedPtr imu_sub_;
+
+  // Camera interface. Declared last so the cameras are destroyed (and stop streaming) before
+  // the buffers and publishers their frame callbacks use.
+  std::unique_ptr<CameraInterface> left_camera_;
+  std::unique_ptr<CameraInterface> right_camera_;
 };
 
 }  // namespace vimbax_camera

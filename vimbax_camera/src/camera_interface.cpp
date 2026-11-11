@@ -120,7 +120,16 @@ bool CameraInterface::initialize(FrameCallback callback)
 
       // ---- Callback ----
       if (frame_callback_) {
-        frame_callback_(camera_frame);
+        try {
+          frame_callback_(camera_frame);
+        } catch (const rclcpp::exceptions::RCLError &) {
+          // Frames keep arriving after SIGINT has shut ROS down, until the node closes the
+          // cameras, and publishing them throws. Letting that escape this thread would abort
+          // the process with the stream still open.
+          if (rclcpp::ok()) {
+            throw;
+          }
+        }
       }
 
       // ---- Requeue frame ----

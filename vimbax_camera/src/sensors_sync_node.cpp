@@ -112,6 +112,16 @@ SensorsSyncNode::~SensorsSyncNode()
   disable_pwm();
 }
 
+void SensorsSyncNode::shutdown()
+{
+  // Called before rclcpp::shutdown(): closing the cameras while rclcpp's signal handlers are
+  // still installed means launch's follow-up SIGINT/SIGTERM can't kill the process with the
+  // streams open (the kernel then takes ~16 s to release them).
+  disable_pwm();
+  left_camera_.reset();
+  right_camera_.reset();
+}
+
 void SensorsSyncNode::trigger_pwm()
 {
   std::string command = "/usr/local/bin/pwm_control.sh 0 " +
@@ -409,10 +419,12 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   auto node = std::make_shared<vimbax_camera::SensorsSyncNode>(rclcpp::NodeOptions{});
   if (!node->initialize()) {
+    node->shutdown();
     rclcpp::shutdown();
     return 1;
   }
   rclcpp::spin(node);
+  node->shutdown();
   rclcpp::shutdown();
   return 0;
 }
