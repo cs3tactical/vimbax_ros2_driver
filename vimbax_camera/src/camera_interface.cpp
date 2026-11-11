@@ -81,10 +81,7 @@ bool CameraInterface::initialize(FrameCallback callback)
   std::string pixel_format = info->pixel_format;
   EncodingInfo enc_info = get_encoding_from_pixel_format(pixel_format);
 
-  // Start streaming with callback
-  int buffer_count = 10;
-  auto result = camera_->start_streaming(buffer_count,
-    [this, enc_info](std::shared_ptr<vimbax_camera::VimbaXCamera::Frame> frame) {
+  on_frame_ = [this, enc_info](std::shared_ptr<vimbax_camera::VimbaXCamera::Frame> frame) {
       CameraFrame camera_frame;
       camera_frame.frame_id = frame->get_frame_id();
       camera_frame.internal_timestamp_ns = frame->get_timestamp_ns();
@@ -145,10 +142,9 @@ bool CameraInterface::initialize(FrameCallback callback)
       if (err != VmbErrorSuccess) {
         RCLCPP_ERROR(node_->get_logger(), "Failed to re-queue frame (%d)", err);
       }
-    });
+    };
 
-  if (!result) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to start streaming on camera: %s", camera_id_.c_str());
+  if (!start_streaming()) {
     return false;
   }
 
@@ -160,6 +156,30 @@ bool CameraInterface::initialize(FrameCallback callback)
 bool CameraInterface::is_ready() const
 {
   return ready_;
+}
+
+bool CameraInterface::stop_streaming()
+{
+  auto result = camera_->stop_streaming();
+  if (!result) {
+    RCLCPP_ERROR(node_->get_logger(), "Failed to stop streaming on camera: %s", camera_id_.c_str());
+    return false;
+  }
+  return true;
+}
+
+bool CameraInterface::start_streaming()
+{
+  // The frame ID may restart from 0 on a new stream
+  last_frame_id_ = 0;
+
+  int buffer_count = 10;
+  auto result = camera_->start_streaming(buffer_count, on_frame_);
+  if (!result) {
+    RCLCPP_ERROR(node_->get_logger(), "Failed to start streaming on camera: %s", camera_id_.c_str());
+    return false;
+  }
+  return true;
 }
 
 void CameraInterface::populate_metadata(CameraMetadata & meta)

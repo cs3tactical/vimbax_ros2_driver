@@ -26,6 +26,16 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   // imu_buffer_duration_ = this->declare_parameter<double>("imu_buffer_duration", 3.0);
   print_frames_data_ = this->declare_parameter<bool>("print_frames_data", false);
   print_stereo_pair_data_ = this->declare_parameter<bool>("print_stereo_pair_data", false);
+  // Stream recovery. A frame corrupted on the CSI link costs the driver one capture buffer until
+  // the stream restarts, so the camera first loses frames the other one delivers, then stops.
+  // Restart both streams when no pair was published for stall_timeout s, or when
+  // max_unmatched_frames frames arrived from only one camera within unmatched_window s (0 disables).
+  stall_timeout_ = std::chrono::duration<double>(
+    this->declare_parameter<double>("stall_timeout", 1.0));
+  max_unmatched_frames_ = static_cast<size_t>(
+    this->declare_parameter<int>("max_unmatched_frames", 3));
+  unmatched_window_ = std::chrono::duration<double>(
+    this->declare_parameter<double>("unmatched_window", 5.0));
 
   left_info_mgr_ = std::make_shared<camera_info_manager::CameraInfoManager>(
     this, left_camera_link_, left_camera_info_url_);
@@ -42,6 +52,11 @@ SensorsSyncNode::SensorsSyncNode(const rclcpp::NodeOptions & options)
   right_temp_pub_ = this->create_publisher<sensor_msgs::msg::Temperature>("camera_right/temperature", 10);
   
   warning_pub_ = this->create_publisher<std_msgs::msg::String>(warning_topic_, 10);
+
+  // Created here rather than in initialize(): a SIGINT during the camera open invalidates the
+  // context, and creating a timer then throws. It only fires once spinning, after initialize().
+  watchdog_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(200), std::bind(&SensorsSyncNode::watchdog_callback, this));
 }
 
 bool SensorsSyncNode::initialize()
@@ -103,6 +118,10 @@ bool SensorsSyncNode::initialize()
   // }
 
   trigger_pwm();
+  {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    last_pair_time_ = std::chrono::steady_clock::now();
+  }
   return true;
 }
 
@@ -143,6 +162,87 @@ void SensorsSyncNode::disable_pwm()
   } else {
     RCLCPP_ERROR(this->get_logger(), "Failed to disable PWM signal.");
   }
+}
+
+void SensorsSyncNode::watchdog_callback()
+{
+  std::string reason;
+  {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    const auto now = std::chrono::steady_clock::now();
+    while (!unmatched_frame_times_.empty() &&
+           now - unmatched_frame_times_.front() > unmatched_window_) {
+      unmatched_frame_times_.pop_front();
+    }
+
+    const auto since_last_pair =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - last_pair_time_);
+    if (stall_timeout_.count() > 0 && since_last_pair > stall_timeout_) {
+      reason = "no stereo pair for " + std::to_string(since_last_pair.count()) + " ms";
+    } else if (max_unmatched_frames_ > 0 && unmatched_frame_times_.size() >= max_unmatched_frames_) {
+      reason = std::to_string(unmatched_frame_times_.size()) + " frames arrived from only one camera";
+    }
+  }
+
+  if (reason.empty()) {
+    return;
+  }
+
+  // Restart without buffer_mutex_ held: stopping a stream waits for its frame callback to return
+  ++restart_count_;
+  std_msgs::msg::String msg;
+  msg.data = "Restarting camera streams (#" + std::to_string(restart_count_) + "): " + reason;
+  RCLCPP_WARN(this->get_logger(), "%s", msg.data.c_str());
+  warning_pub_->publish(msg);
+
+  if (!restart_streams()) {
+    // Exit with an error so the service restarts the whole node
+    RCLCPP_FATAL(this->get_logger(), "Failed to restart camera streams, exiting.");
+    fatal_error_ = true;
+    rclcpp::shutdown();
+    return;
+  }
+  RCLCPP_INFO(this->get_logger(), "Camera streams restarted.");
+}
+
+bool SensorsSyncNode::restart_streams()
+{
+  // As at startup, no trigger while the streams restart, so both cameras count frames from the
+  // same first trigger and their frame IDs pair up again
+  disable_pwm();
+
+  auto on_both_cameras = [this](const std::function<bool(CameraInterface &)> & action) {
+    bool left_ok = false;
+    std::thread left_thread([&] { left_ok = action(*left_camera_); });
+    bool right_ok = action(*right_camera_);
+    left_thread.join();
+    return left_ok && right_ok;
+  };
+
+  if (!on_both_cameras([](CameraInterface & camera) { return camera.stop_streaming(); })) {
+    return false;
+  }
+  reset_sync_state();
+  if (!on_both_cameras([](CameraInterface & camera) { return camera.start_streaming(); })) {
+    return false;
+  }
+
+  trigger_pwm();
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  last_pair_time_ = std::chrono::steady_clock::now();
+  return true;
+}
+
+void SensorsSyncNode::reset_sync_state()
+{
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  left_buffer_.clear();
+  right_buffer_.clear();
+  unmatched_frame_times_.clear();
+  last_synced_frame_id_ = 0;
+  last_left_frame_id_ = 0;
+  last_right_frame_id_ = 0;
+  camera_time_initialized_ = false;
 }
 
 // void SensorsSyncNode::imu_callback(const ImuMsg::SharedPtr msg)
@@ -246,6 +346,8 @@ std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair
     } else {
       right_buffer_.pop_front();
     }
+    // Dropped a frame the other camera never delivered
+    unmatched_frame_times_.push_back(std::chrono::steady_clock::now());
   }
   return {nullptr, nullptr};
 }
@@ -380,6 +482,7 @@ void SensorsSyncNode::sync_and_publish_frames()
   }
 
   last_synced_frame_id_ = left->frame_id;
+  last_pair_time_ = std::chrono::steady_clock::now();
 
   left_buffer_.erase(std::remove_if(left_buffer_.begin(), left_buffer_.end(),
     [&](const CameraFrame & f) { return f.frame_id <= last_synced_frame_id_; }),
@@ -422,5 +525,5 @@ int main(int argc, char ** argv)
   }
   node->shutdown();
   rclcpp::shutdown();
-  return 0;
+  return node->has_fatal_error() ? 1 : 0;
 }

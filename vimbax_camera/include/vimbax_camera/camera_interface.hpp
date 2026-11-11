@@ -44,12 +44,17 @@ public:
   bool initialize(FrameCallback callback);
   bool is_ready() const;
 
+  // Restart the stream of an initialized camera. Must not be called from the frame callback.
+  bool stop_streaming();
+  bool start_streaming();
+
 private:
   rclcpp::Node * node_;
   std::string camera_id_;
   bool ready_ = false;
   uint64_t last_frame_id_ = 0;
   FrameCallback frame_callback_;
+  std::function<void(std::shared_ptr<vimbax_camera::VimbaXCamera::Frame>)> on_frame_;
 
   std::shared_ptr<vimbax_camera::VmbCAPI> api_;
   std::shared_ptr<vimbax_camera::VimbaXCamera> camera_;

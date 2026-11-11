@@ -8,6 +8,7 @@
 #include <sensor_msgs/msg/temperature.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
 
+#include <chrono>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -26,6 +27,7 @@ public:
 
   bool initialize();
   void shutdown();
+  bool has_fatal_error() const { return fatal_error_; }
 
 private:
   using ImageMsg = sensor_msgs::msg::Image;
@@ -42,6 +44,11 @@ private:
   // Trigger control
   void trigger_pwm();
   void disable_pwm();
+
+  // Stream recovery
+  void watchdog_callback();
+  bool restart_streams();
+  void reset_sync_state();
 
   // rclcpp::Time predict_stamp_using_imu_buffer(
   //   uint64_t frame_id,
@@ -79,6 +86,9 @@ private:
   // double imu_buffer_duration_;
   bool print_frames_data_ = false;
   bool print_stereo_pair_data_ = false;
+  std::chrono::duration<double> stall_timeout_;
+  size_t max_unmatched_frames_;
+  std::chrono::duration<double> unmatched_window_;
 
   // Buffers
   std::deque<CameraFrame> left_buffer_;
@@ -90,7 +100,15 @@ private:
   uint64_t last_synced_frame_id_ = 0;
   uint64_t last_left_frame_id_ = 0;
   uint64_t last_right_frame_id_ = 0;
-  
+
+  // Stream health: last pair published (or streams started), and recent frames that one camera
+  // delivered but the other did not
+  std::chrono::steady_clock::time_point last_pair_time_;
+  std::deque<std::chrono::steady_clock::time_point> unmatched_frame_times_;
+  int restart_count_ = 0;
+  bool fatal_error_ = false;
+  rclcpp::TimerBase::SharedPtr watchdog_timer_;
+
   // size_t imu_index_ = 0;
 
   // Time sync references
