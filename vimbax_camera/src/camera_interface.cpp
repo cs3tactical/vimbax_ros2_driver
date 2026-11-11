@@ -2,6 +2,7 @@
 #include "vimbax_camera/camera_interface.hpp"
 
 #include <vimbax_camera/vimbax_camera_helper.hpp>
+#include <mutex>
 #include <thread>
 
 namespace vimbax_camera_sync
@@ -58,7 +59,14 @@ bool CameraInterface::initialize(FrameCallback callback)
     return false;
   }
 
-  camera_ = vimbax_camera::VimbaXCamera::open(api_, camera_id_);
+  // One open at a time: open() lists the cameras, and the VmbCameraInfo_t strings it compares
+  // point into a list that any other VmbCamerasList call rebuilds. Opening both cameras in
+  // parallel read freed strings (segfault) or saw the list change size (VmbErrorMoreData).
+  static std::mutex open_mutex;
+  {
+    std::lock_guard<std::mutex> lock(open_mutex);
+    camera_ = vimbax_camera::VimbaXCamera::open(api_, camera_id_);
+  }
   if (!camera_) {
     RCLCPP_ERROR(node_->get_logger(), "Failed to open camera: %s", camera_id_.c_str());
     return false;

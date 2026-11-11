@@ -215,19 +215,19 @@ void SensorsSyncNode::right_frame_callback(const CameraFrame & frame)
 
 void SensorsSyncNode::trim_old_data()
 {
-  auto now = this->now();
-  auto trim_old = [&](auto & buffer, auto get_time, double threshold) {
-    while (!buffer.empty() && (now - get_time(buffer.front())).seconds() > threshold) {
+  // Frames carry the camera's own clock, not ROS time, so age is measured against the newest
+  // frame in the same buffer. This bounds the buffer of a camera whose counterpart has stopped
+  // delivering (~1.8 MB per frame).
+  const auto max_age_ns = static_cast<uint64_t>(camera_buffer_duration_ * 1e9);
+  auto trim_old = [&](std::deque<CameraFrame> & buffer) {
+    while (!buffer.empty() &&
+           buffer.back().internal_timestamp_ns > buffer.front().internal_timestamp_ns + max_age_ns) {
       buffer.pop_front();
     }
   };
 
-  trim_old(left_buffer_, [](const CameraFrame & f) {
-    return rclcpp::Time(f.image.header.stamp);
-  }, camera_buffer_duration_);
-  trim_old(right_buffer_, [](const CameraFrame & f) {
-    return rclcpp::Time(f.image.header.stamp);
-  }, camera_buffer_duration_);
+  trim_old(left_buffer_);
+  trim_old(right_buffer_);
   // trim_old(imu_buffer_, [](const std::pair<uint64_t, ImuMsg::SharedPtr> & pair) {
   //   return pair.second->header.stamp;
   // }, imu_buffer_duration_);
@@ -282,7 +282,7 @@ std::pair<CameraFrame*, CameraFrame*> SensorsSyncNode::find_earliest_stereo_pair
 
 void SensorsSyncNode::sync_and_publish_frames()
 {
-  // trim_old_data();
+  trim_old_data();
   if (left_buffer_.empty() || right_buffer_.empty()) {
     return;
   }
@@ -295,25 +295,18 @@ void SensorsSyncNode::sync_and_publish_frames()
     return;
   }
 
-  // Start timestamp sync from frame ID #1, not 0:
-  if (left->frame_id == 1 && !camera_time_initialized_) {
+  // Anchor timestamp sync on the first stereo pair. Frame ID #0 never reaches the buffers, so
+  // this is frame #1 unless that frame was lost on either camera.
+  if (!camera_time_initialized_) {
     camera_start_ts_left_ = left->internal_timestamp_ns;
     camera_start_ts_right_ = right->internal_timestamp_ns;
     camera_start_ros_time_ = this->now();
     camera_time_initialized_ = true;
 
     RCLCPP_INFO(this->get_logger(),
-      "Camera start time anchored from first stereo pair (frame #1): %.9f",
-      camera_start_ros_time_.seconds());
+      "Camera start time anchored from first stereo pair (frame #%lu): %.9f",
+      left->frame_id, camera_start_ros_time_.seconds());
   }
-
-  if (!camera_time_initialized_) {
-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-      "Camera start time not set yet. Waiting for first stereo pair.");
-    return;
-  }
-
-  // if (!camera_time_initialized_) return;
 
   uint64_t dt_left = left->internal_timestamp_ns - camera_start_ts_left_;
   uint64_t dt_right = right->internal_timestamp_ns - camera_start_ts_right_;
@@ -423,7 +416,10 @@ int main(int argc, char ** argv)
     rclcpp::shutdown();
     return 1;
   }
-  rclcpp::spin(node);
+  // A SIGINT during the camera open has already shut ROS down, and spinning would throw
+  if (rclcpp::ok()) {
+    rclcpp::spin(node);
+  }
   node->shutdown();
   rclcpp::shutdown();
   return 0;
